@@ -1,0 +1,11 @@
+.button-base {
+	@apply text-base rounded-[25px];
+
+	&__default {
+		@apply bg-blue-500 text-white-100;
+	}
+
+	&__disabled {
+		@apply bg-blue-200 text-white-100;
+	}
+}
