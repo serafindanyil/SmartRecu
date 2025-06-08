@@ -11,13 +11,13 @@ interface NavigationProps {
 const Navigation = ({ className }: NavigationProps) => {
 	return (
 		<nav className={`${className}`}>
-			<ul className="flex flex-row w-max gap-8 py-4 px-8  bg-white-100 shadow-shapes rounded-[25px]">
+			<ul className="flex flex-row w-max gap-8 py-4 px-8 bg-white-100 shadow-shapes rounded-[25px]">
 				<NavigationLink page="home">
 					{(style) => {
 						return <Home height={24} width={24} className={style} />;
 					}}
 				</NavigationLink>
-				<NavigationLink page="about">
+				<NavigationLink page="statistics">
 					{(style) => {
 						return <Chart height={24} width={24} className={style} />;
 					}}
