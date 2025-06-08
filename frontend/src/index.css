@@ -33,9 +33,6 @@ button {
 		color: rgba(33, 34, 39, 1);
 		background-color: rgba(225, 236, 244, 1);
 	}
-	button {
-		background-color: #f9f9f9;
-	}
 }
 
 .header-primary {

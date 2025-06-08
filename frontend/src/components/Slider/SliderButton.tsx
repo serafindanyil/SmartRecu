@@ -1,9 +1,15 @@
+import "./SliderButton.scss";
+
 interface SliderButtonProps {
 	children: React.ReactNode;
+	variant?: "active" | "disabled";
 }
 
-const SliderButton = ({ children }: SliderButtonProps) => {
-	return <button className="bg-white-100 w-full">{children}</button>;
+const SliderButton = ({
+	children,
+	variant = "disabled",
+}: SliderButtonProps) => {
+	return <button className={`button button--${variant}`}>{children}</button>;
 };
 
 export default SliderButton;
