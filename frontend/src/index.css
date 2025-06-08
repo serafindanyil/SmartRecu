@@ -17,7 +17,7 @@ body {
 	margin: 0;
 	min-width: 320px;
 	height: 100vh;
-	overflow-y: hidden;
+	overflow-x: hidden;
 	box-sizing: border-box;
 }
 
@@ -33,15 +33,6 @@ button {
 		color: rgba(33, 34, 39, 1);
 		background-color: rgba(225, 236, 244, 1);
 	}
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-	display: none;
-}
-
-.scrollbar-hide {
-	scrollbar-width: none;
-	-ms-overflow-style: none;
 }
 
 .header-indicator {

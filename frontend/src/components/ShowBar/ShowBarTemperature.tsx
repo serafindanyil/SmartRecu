@@ -1,9 +1,13 @@
 import ShowBarBase from "./ShowBarBase";
 import type { TLevelIndicator } from "~/types/TIndicator";
 
-const ShowBarTemperature = ({ level, ...props }: TLevelIndicator) => {
+const ShowBarTemperature = ({
+	level,
+	description,
+	...props
+}: TLevelIndicator & { description: string }) => {
 	return (
-		<ShowBarBase title="Температура" {...props}>
+		<ShowBarBase title="Температура" description={description} {...props}>
 			<p className="header-indicator">{level} °C</p>
 		</ShowBarBase>
 	);
