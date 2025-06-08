@@ -1,8 +1,9 @@
-import Logo from "../../assets/logo.svg?react";
+import Logo from "~/assets/logo.svg?react";
 
 const Header = ({ className = "", version = "0.1", isOnline = false }) => {
 	return (
-		<header className={`${className}`}>
+		<header
+			className={`${className} sticky top-0 z-50 pt-4 pb-8 bg-gradient-to-b gradient-background`}>
 			<div className="flex flex-row items-center justify-between bg-white-100 py-2 px-4 w-full rounded-[25px] shadow-shapes">
 				<div className="inline-flex flex-row items-center gap-2 w-full">
 					<Logo width={24} height={24} />

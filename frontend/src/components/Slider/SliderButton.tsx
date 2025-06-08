@@ -1,6 +1,7 @@
-import "./SliderButton.scss";
+import "./Slider.scss";
 
-interface SliderButtonProps {
+interface SliderButtonProps
+	extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 	children: React.ReactNode;
 	variant?: "active" | "disabled";
 }
@@ -8,8 +9,13 @@ interface SliderButtonProps {
 const SliderButton = ({
 	children,
 	variant = "disabled",
+	...props
 }: SliderButtonProps) => {
-	return <button className={`button button--${variant}`}>{children}</button>;
+	return (
+		<button className={`slider__button slider__button--${variant}`} {...props}>
+			{children}
+		</button>
+	);
 };
 
 export default SliderButton;

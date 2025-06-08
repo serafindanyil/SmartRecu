@@ -16,12 +16,15 @@ const ShowBarMode = () => {
 	};
 
 	const isActive = (currentMode: Mode) => {
-		return mode === currentMode ? "active" : "default";
+		return mode === currentMode ? "active" : "disabled";
 	};
+
+	const activeIndex = Object.keys(modeMapping).indexOf(mode);
+
 	return (
 		<ShowBarBase title="Режим" description={modeMapping[mode]}>
 			<div className="flex flex-row justify-center">
-				<SliderWrapper>
+				<SliderWrapper activeIndex={activeIndex}>
 					<SliderButton
 						variant={isActive("manual")}
 						onClick={() => setMode("manual")}>

@@ -17,8 +17,8 @@ body {
 	margin: 0;
 	min-width: 320px;
 	height: 100vh;
+	overflow-y: hidden;
 	box-sizing: border-box;
-	overflow: hidden;
 }
 
 button {
@@ -35,6 +35,22 @@ button {
 	}
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+	display: none;
+}
+
+.scrollbar-hide {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.header-indicator {
+	@apply font-bold text-blue-500 text-3xl leading-9;
+}
 .header-primary {
 	@apply text-3xl font-bold text-black-500 leading-[38px] tracking-[-0.02em];
+}
+
+.gradient-background {
+	@apply from-blue-100 to-blue-100/0 from-50% to-100%;
 }

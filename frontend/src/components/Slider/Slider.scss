@@ -1,0 +1,18 @@
+.slider {
+	@apply flex flex-row justify-around items-center gap-1 bg-blue-400 rounded-[25px] p-1 w-full relative;
+
+	&__button {
+		@apply font-semibold text-sm leading-[18px] w-full py-3 rounded-[21px];
+
+		&__indicator {
+			@apply bg-white-100 absolute before:content-['.'] before:text-transparent transition-all duration-200;
+		}
+
+		&--disabled {
+			@apply text-white-100 z-10;
+		}
+		&--active {
+			@apply text-black-400 z-10;
+		}
+	}
+}
