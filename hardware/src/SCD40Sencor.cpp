@@ -1,48 +1,69 @@
 #include "SCD40Sensor.h"
 
-SCD40Sensor::SCD40Sensor(uint8_t sdaPin, uint8_t sclPin)
-    : customWire(TwoWire(0)), sdaPin(sdaPin), sclPin(sclPin) {}
+SCD40Sensor::SCD40Sensor() {}
 
-bool SCD40Sensor::begin() {
-    customWire.begin(sdaPin, sclPin);
-    sensor.begin(customWire, SCD41_I2C_ADDR_62);
+bool SCD40Sensor::begin(TwoWire *wire, uint8_t sdaPin, uint8_t sclPin) {
+  customWire = wire;
 
-    delay(20);
-    sensor.wakeUp();
-    sensor.stopPeriodicMeasurement();
-    sensor.reinit();
+  customWire->begin(sdaPin, sclPin, 100000);
+  delay(1000);
+  yield();
 
-    uint64_t serialNumber;
-    error = sensor.getSerialNumber(serialNumber);
-    if (error) {
-        printError("getSerialNumber");
-        return false;
-    }
+  sensor.begin(*customWire, SCD40_I2C_ADDR_62);
+  delay(1000);
+  yield();
 
-    error = sensor.startPeriodicMeasurement();
-    if (error) {
-        printError("startPeriodicMeasurement");
-        return false;
-    }
+  error = sensor.wakeUp();
+  delay(20);
+  yield();
 
-    return true;
+  error = sensor.stopPeriodicMeasurement();
+  delay(500);
+  yield();
+
+  error = sensor.reinit();
+  delay(20);
+  yield();
+
+  uint64_t serialNumber;
+  error = sensor.getSerialNumber(serialNumber);
+
+  if (error != 0) {
+    return false;
+  }
+
+  error = sensor.startPeriodicMeasurement();
+
+  if (error != 0) {
+    return false;
+  }
+
+  delay(5000);
+  return true;
 }
 
 void SCD40Sensor::update() {
-    bool ready = false;
-    error = sensor.getDataReadyStatus(ready);
-    if (error || !ready) return;
+  yield();
 
-    error = sensor.readMeasurement(co2, temperature, humidity);
-    if (error) {
-        printError("readMeasurement");
-    }
+  bool ready = false;
+  error = sensor.getDataReadyStatus(ready);
+
+  if (error != 0 || !ready) {
+    return;
+  }
+
+  error = sensor.readMeasurement(co2, temperature, humidity);
+  yield();
+
+  if (error != 0) {
+    return;
+  }
+
+  if (co2 == 0 && temperature == 0.0 && humidity == 0.0) {
+    return;
+  }
 }
 
-void SCD40Sensor::printError(const char* label) {
-    errorToString(error, errorMessage, sizeof(errorMessage));
-    Serial.print("SCD40 error in ");
-    Serial.print(label);
-    Serial.print(": ");
-    Serial.println(errorMessage);
+void SCD40Sensor::printError(const char *errorMessage) {
+  // Порожня функція
 }

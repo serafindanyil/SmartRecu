@@ -1,31 +1,27 @@
 #pragma once
 
-#include <Wire.h>
 #include <SensirionI2cScd4x.h>
+#include <Wire.h>
 
 class SCD40Sensor {
 public:
-    SCD40Sensor(uint8_t sdaPin, uint8_t sclPin);
+  SCD40Sensor();
+  bool begin(TwoWire *wire, uint8_t sdaPin, uint8_t sclPin);
+  void update();
 
-    bool begin();
-    void update();
-
-    uint16_t getCO2() const { return co2; }
-    float getTemperature() const { return temperature; }
-    float getHumidity() const { return humidity; }
+  uint16_t getCO2() const { return co2; }
+  float getTemperature() const { return temperature; }
+  float getHumidity() const { return humidity; }
 
 private:
-    TwoWire customWire;
-    SensirionI2cScd4x sensor;
-    int16_t error;
-    char errorMessage[64];
+  TwoWire *customWire = nullptr;
+  SensirionI2cScd4x sensor;
+  int16_t error;
+  char errorMessage[64];
 
-    uint16_t co2 = 0;
-    float temperature = 0;
-    float humidity = 0;
+  uint16_t co2 = 0;
+  float temperature = 0;
+  float humidity = 0;
 
-    uint8_t sdaPin;
-    uint8_t sclPin;
-
-    void printError(const char* label);
+  void printError(const char *label);
 };
