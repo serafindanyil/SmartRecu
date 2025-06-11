@@ -1,3 +1,5 @@
+import type React from "react";
+
 export type TIndicator =
 	| "Дуже погано"
 	| "Погано"
@@ -6,5 +8,6 @@ export type TIndicator =
 	| "Дуже добре";
 
 export interface TLevelIndicator {
-	level: number | "Не визначено";
+	level?: number;
+	description: React.ReactNode;
 }

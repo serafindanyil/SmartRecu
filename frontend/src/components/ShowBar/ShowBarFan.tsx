@@ -8,7 +8,7 @@ const ShowBarFan = ({
 }: TLevelIndicator & { description: string }) => {
 	return (
 		<ShowBarBase title={"Вентилятор"} description={description} {...props}>
-			<p className="header-indicator">{level} rpm</p>
+			<p className="header-indicator">{level ?? ": ("} rpm</p>
 		</ShowBarBase>
 	);
 };

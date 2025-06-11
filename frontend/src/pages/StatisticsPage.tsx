@@ -1,24 +1,41 @@
 import ShowBarCO2 from "~/components/ShowBar/ShowBarCO2";
 import ShowBarHumidity from "~/components/ShowBar/ShowBarHumidity";
-import ShowBarEfficienty from "~/components/ShowBar/ShowBarEfficienty";
+// import ShowBarEfficienty from "~/components/ShowBar/ShowBarEfficienty";
 import ShowBarTemperature from "~/components/ShowBar/ShowBarTemperature";
 import ShowBarFan from "~/components/ShowBar/ShowBarFan";
 
+import useWebSocket from "~/hooks/useWebSocket";
+import Indicator from "~/components/Indicator/Indicator";
+
 export const StatisticsPage = () => {
+	const { sensorData } = useWebSocket();
+
 	return (
 		<>
 			<h1 className="header-primary mb-6">Показники</h1>
 			<div className="space-y-5 px-2 pb-[8rem] w-full">
-				<ShowBarCO2 level={400} />
-				<ShowBarHumidity level={60} />
+				<ShowBarCO2
+					level={sensorData?.co2}
+					description={<Indicator variant="co2" />}
+				/>
+				<ShowBarHumidity
+					level={sensorData?.humidity}
+					description={<Indicator variant="humidity" />}
+				/>
 
-				<ShowBarTemperature description="Зовнішня" level={24} />
-				<ShowBarTemperature description="Внутрішня" level={27} />
+				<ShowBarTemperature
+					description="Зовнішня"
+					level={sensorData?.tempOut}
+				/>
+				<ShowBarTemperature
+					description="Внутрішня"
+					level={sensorData?.tempIn}
+				/>
 
-				<ShowBarFan description="Вдування" level={2900} />
-				<ShowBarFan description="Видування" level={800} />
+				<ShowBarFan description="Вдування" level={sensorData?.fanInRPM} />
+				<ShowBarFan description="Видування" level={sensorData?.fanOutRPM} />
 
-				<ShowBarEfficienty level={60} />
+				{/* <ShowBarEfficiency level={60} /> */}
 			</div>
 		</>
 	);
