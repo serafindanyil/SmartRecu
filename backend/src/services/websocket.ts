@@ -2,6 +2,7 @@ import { Server as WebSocketServer, WebSocket } from "ws";
 import { Server as HTTPServer } from "http";
 
 import metrics from "../instructions/metrics.json";
+import { TMode } from "src/types/TMode";
 
 // Тип повідомлень
 type MessagePayload = {
@@ -72,6 +73,13 @@ export function setupWebSocket(server: HTTPServer) {
 		checkAndBroadcastStatus(wss);
 	}, 2000);
 
+	// Ініціалізовані динамічні дані з ESP32
+	let switchState: boolean | null = null;
+	let mode: TMode | null = null;
+
+	let fanInSpeed: number | null = null;
+	let fanOutSpeed: number | null = null;
+
 	// Очищуємо інтервал при закритті сервера
 	wss.on("close", () => {
 		clearInterval(statusCheckInterval);
@@ -124,6 +132,113 @@ export function setupWebSocket(server: HTTPServer) {
 								checkAndBroadcastStatus(wss);
 								break;
 
+							case "switchState":
+								// Оновлюємо час останнього update від ESP32
+								esp32LastUpdate.set(ws, Date.now());
+								switchState = parsed.data;
+
+								// Пересилаємо дані сенсорів всім web клієнтам
+								wss.clients.forEach((client) => {
+									if (
+										client !== ws &&
+										client.readyState === WebSocket.OPEN &&
+										clientTypes.get(client) === "web"
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "switchState",
+												data: parsed.data,
+											})
+										);
+									}
+								});
+
+								// Перевіряємо і оновлюємо статус
+								checkAndBroadcastStatus(wss);
+								break;
+							case "changeMode":
+								// Оновлюємо час останнього update від ESP32
+								esp32LastUpdate.set(ws, Date.now());
+								mode = parsed.data;
+
+								// Пересилаємо дані сенсорів всім web клієнтам
+								wss.clients.forEach((client) => {
+									if (
+										client !== ws &&
+										client.readyState === WebSocket.OPEN &&
+										clientTypes.get(client) === "web"
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "changeMode",
+												data: parsed.data,
+											})
+										);
+									}
+								});
+
+								// Перевіряємо і оновлюємо статус
+								checkAndBroadcastStatus(wss);
+								break;
+							case "changeFanInSpd":
+								// Оновлюємо час останнього update від ESP32
+								esp32LastUpdate.set(ws, Date.now());
+								fanInSpeed = parsed.data;
+
+								// Пересилаємо дані сенсорів всім web клієнтам
+								wss.clients.forEach((client) => {
+									if (
+										client !== ws &&
+										client.readyState === WebSocket.OPEN &&
+										clientTypes.get(client) === "web"
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "changeFanInSpd",
+												data: parsed.data,
+											})
+										);
+									}
+								});
+
+								// Перевіряємо і оновлюємо статус
+								checkAndBroadcastStatus(wss);
+								break;
+							case "changeFanOutSpd":
+								// Оновлюємо час останнього update від ESP32
+								esp32LastUpdate.set(ws, Date.now());
+								fanOutSpeed = parsed.data;
+
+								// Пересилаємо дані сенсорів всім web клієнтам
+								wss.clients.forEach((client) => {
+									if (
+										client !== ws &&
+										client.readyState === WebSocket.OPEN &&
+										clientTypes.get(client) === "web"
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "changeFanOutSpd",
+												data: parsed.data,
+											})
+										);
+									}
+								});
+
+								// Перевіряємо і оновлюємо статус
+								checkAndBroadcastStatus(wss);
+								break;
+							case "init":
+								// Пересилаємо дані сенсорів всім web клієнтам
+								switchState = parsed.data.switchState;
+								mode = parsed.data.mode;
+								checkAndBroadcastStatus(wss);
+								break;
+
 							default:
 								console.log("⚠️ Невідомий тип від ESP32:", parsed.type);
 								break;
@@ -138,7 +253,11 @@ export function setupWebSocket(server: HTTPServer) {
 									JSON.stringify({
 										device: "server",
 										type: "setup",
-										data: metrics,
+										data: {
+											metrics: metrics,
+											switchState: switchState,
+											mode: mode,
+										},
 									})
 								);
 
@@ -150,6 +269,73 @@ export function setupWebSocket(server: HTTPServer) {
 										data: hasActiveESP32() ? "Online" : "Offline",
 									})
 								);
+								break;
+
+							case "switchState":
+								for (const [client, type] of clientTypes.entries()) {
+									if (
+										type === "esp32" &&
+										client.readyState === WebSocket.OPEN
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "switchState",
+												data: parsed.data,
+											})
+										);
+									}
+								}
+								break;
+
+							case "changeMode":
+								for (const [client, type] of clientTypes.entries()) {
+									if (
+										type === "esp32" &&
+										client.readyState === WebSocket.OPEN
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "changeMode",
+												data: parsed.data,
+											})
+										);
+									}
+								}
+								break;
+							case "changeFanInSpd":
+								for (const [client, type] of clientTypes.entries()) {
+									if (
+										type === "esp32" &&
+										client.readyState === WebSocket.OPEN
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "ChangeFanInSpd",
+												data: parsed.data,
+											})
+										);
+									}
+								}
+								break;
+
+							case "changeFanOutSpd":
+								for (const [client, type] of clientTypes.entries()) {
+									if (
+										type === "esp32" &&
+										client.readyState === WebSocket.OPEN
+									) {
+										client.send(
+											JSON.stringify({
+												device: "server",
+												type: "ChangeFanOutSpd",
+												data: parsed.data,
+											})
+										);
+									}
+								}
 								break;
 
 							case "ping":
