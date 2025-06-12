@@ -1,13 +1,12 @@
 import ShowBarBase from "./ShowBarBase";
-import { useState } from "react";
-
 import SliderWrapper from "../Slider/SliderWrapper";
 import SliderButton from "../Slider/SliderButton";
 
-type Mode = "manual" | "auto" | "turbo";
+import type { TChangeMode } from "~/types/TChangeMode";
+import useWebSocket from "~/hooks/useWebSocket";
 
 const ShowBarMode = () => {
-	const [mode, setMode] = useState<Mode>("auto");
+	const { changeMode, sendMessage } = useWebSocket();
 
 	const modeMapping = {
 		manual: "Ручний",
@@ -15,29 +14,29 @@ const ShowBarMode = () => {
 		turbo: "Турбо",
 	};
 
-	const isActive = (currentMode: Mode) => {
-		return mode === currentMode ? "active" : "disabled";
+	const isActive = (currentMode: TChangeMode) => {
+		return changeMode === currentMode ? "active" : "disabled";
 	};
 
-	const activeIndex = Object.keys(modeMapping).indexOf(mode);
+	const activeIndex = Object.keys(modeMapping).indexOf(changeMode);
 
 	return (
-		<ShowBarBase title="Режим" description={modeMapping[mode]}>
+		<ShowBarBase title="Режим" description={modeMapping[changeMode]}>
 			<div className="flex flex-row justify-center">
 				<SliderWrapper activeIndex={activeIndex}>
 					<SliderButton
 						variant={isActive("manual")}
-						onClick={() => setMode("manual")}>
+						onClick={() => sendMessage("changeMode", "manual")}>
 						Ручний
 					</SliderButton>
 					<SliderButton
 						variant={isActive("auto")}
-						onClick={() => setMode("auto")}>
+						onClick={() => sendMessage("changeMode", "auto")}>
 						Авто
 					</SliderButton>
 					<SliderButton
 						variant={isActive("turbo")}
-						onClick={() => setMode("turbo")}>
+						onClick={() => sendMessage("changeMode", "turbo")}>
 						Турбо
 					</SliderButton>
 				</SliderWrapper>
