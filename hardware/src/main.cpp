@@ -8,11 +8,11 @@
 #include <Wire.h>
 
 // WiFi налаштування
-#define WIFI_SSID "Danyil"
-#define WIFI_PASSWORD "8888888812"
+#define WIFI_SSID "Urec_Holodec"
+#define WIFI_PASSWORD "nash526safron"
 
 // WebSocket налаштування
-#define WS_HOST "172.20.10.2"
+#define WS_HOST "192.168.31.88"
 #define WS_PORT 3000
 #define WS_PATH "/ws"
 
@@ -21,8 +21,8 @@
 #define SCL_PIN 0
 
 // ГЛОБАЛЬНІ ЗМІННІ ДЛЯ ШВИДКОСТІ ВЕНТИЛЯТОРІВ
-int fanInSpeed = 100;  // Швидкість внутрішнього вентилятора (%)
-int fanOutSpeed = 100; // Швидкість зовнішнього вентилятора (%)
+int fanInSpeed = 50;  // Швидкість внутрішнього вентилятора (%)
+int fanOutSpeed = 50; // Швидкість зовнішнього вентилятора (%)
 
 FanController fanToInside(1, 0, 2, 2);
 FanController fanToOutside(42, 1, 41, 2);
@@ -35,6 +35,7 @@ WebSocketsClient webSocket;
 bool webSocketConnected = false;
 
 bool isFanEnabled = true;
+String currentMode = "auto";
 
 void handleFanControl() {
   if (isFanEnabled) {
@@ -44,6 +45,137 @@ void handleFanControl() {
     fanToInside.setSpeedPercent(0);
     fanToOutside.setSpeedPercent(0);
   }
+}
+
+void switchState(bool state) {
+  isFanEnabled = state;
+
+  if (!webSocketConnected) {
+    return;
+  }
+
+  StaticJsonDocument<300> doc;
+  doc["device"] = "esp32";
+  doc["type"] = "switchState";
+  doc["data"] = isFanEnabled;
+
+  String jsonString;
+  serializeJson(doc, jsonString);
+
+  webSocket.sendTXT(jsonString);
+  Serial.println("[WebSocket] Sent: " + jsonString);
+}
+
+void changeMode(String state) {
+  currentMode = state;
+
+  if (!webSocketConnected) {
+    return;
+  }
+
+  StaticJsonDocument<300> doc;
+  doc["device"] = "esp32";
+  doc["type"] = "changeMode";
+  doc["data"] = currentMode;
+
+  String jsonString;
+  serializeJson(doc, jsonString);
+
+  webSocket.sendTXT(jsonString);
+  Serial.println("[WebSocket] Sent: " + jsonString);
+}
+
+// void changeFanSpd(int currentFan, String type, String state) {
+//   currentFan = state.toInt();
+
+//   if (!webSocketConnected) {
+//     return;
+//   }
+
+//   StaticJsonDocument<300> doc;
+//   doc["device"] = "esp32";
+//   doc["type"] = type;
+//   doc["data"] = currentFan;
+
+//   String jsonString;
+//   serializeJson(doc, jsonString);
+
+//   webSocket.sendTXT(jsonString);
+//   Serial.println("[WebSocket] Sent: " + jsonString);
+// }
+
+template <typename T>
+void sendWebSocketCommand(const String &type, const T &value,
+                          const String &state) {
+  value = state;
+  if (!webSocketConnected) {
+    return;
+  }
+
+  StaticJsonDocument<300> doc;
+  doc["device"] = "esp32";
+  doc["type"] = type;
+  doc["data"] = value;
+
+  String jsonString;
+  serializeJson(doc, jsonString);
+
+  webSocket.sendTXT(jsonString);
+  Serial.println("[WebSocket] Sent: " + jsonString);
+}
+
+void handleWebSocketMessage(const String &message) {
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, message);
+
+  if (error) {
+    Serial.printf("[WebSocket] JSON parse error: %s\n", error.c_str());
+    return;
+  }
+
+  if (doc.containsKey("type")) {
+    if (doc["type"] == "switchState") {
+      bool state = doc["data"];
+      sendWebSocketCommand("switchState", isFanEnabled, state);
+      // switchState(state);
+    }
+    if (doc["type"] == "changeMode") {
+      String mode = doc["data"];
+      sendWebSocketCommand("changeMode", currentMode, mode);
+      // changeMode(mode);
+    }
+    if (doc["type"] == "ChangeFanInSpd") {
+      int speed = doc["data"];
+      sendWebSocketCommand("ChangeFanInSpd", fanInSpeed, speed);
+    }
+    if (doc["type"] == "ChangeFanOutSpd") {
+      int speed = doc["data"];
+      sendWebSocketCommand("ChangeFanOutSpd", fanOutSpeed, speed);
+    }
+  }
+}
+
+void handleWebSocketInitialization() {
+  if (!webSocketConnected) {
+    return;
+  }
+
+  StaticJsonDocument<300> doc;
+  doc["device"] = "esp32";
+  doc["type"] = "init";
+
+  JsonObject data = doc.createNestedObject("data");
+
+  data["switchState"] = isFanEnabled;
+  data["mode"] = currentMode;
+  data["fanInSpd"] = fanInSpeed;
+  data["fanOutSpd"] = fanOutSpeed;
+
+  String jsonString;
+  serializeJson(doc, jsonString);
+
+  webSocket.sendTXT(jsonString);
+  Serial.println("[WebSocket] Sent: " + jsonString);
 }
 
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
@@ -56,10 +188,11 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
   case WStype_CONNECTED:
     Serial.printf("[WebSocket] Connected to: %s\n", payload);
     webSocketConnected = true;
+    handleWebSocketInitialization();
     break;
 
   case WStype_TEXT:
-    Serial.printf("[WebSocket] Received: %s\n", payload);
+    handleWebSocketMessage((const char *)payload);
     break;
 
   case WStype_ERROR:
