@@ -37,77 +37,12 @@ bool webSocketConnected = false;
 bool isFanEnabled = true;
 String currentMode = "auto";
 
-void handleFanControl() {
-  if (isFanEnabled) {
-    fanToInside.setSpeedPercent(fanInSpeed);
-    fanToOutside.setSpeedPercent(fanOutSpeed);
-  } else {
-    fanToInside.setSpeedPercent(0);
-    fanToOutside.setSpeedPercent(0);
-  }
-}
-
-void switchState(bool state) {
-  isFanEnabled = state;
-
-  if (!webSocketConnected) {
-    return;
-  }
-
-  StaticJsonDocument<300> doc;
-  doc["device"] = "esp32";
-  doc["type"] = "switchState";
-  doc["data"] = isFanEnabled;
-
-  String jsonString;
-  serializeJson(doc, jsonString);
-
-  webSocket.sendTXT(jsonString);
-  Serial.println("[WebSocket] Sent: " + jsonString);
-}
-
-void changeMode(String state) {
-  currentMode = state;
-
-  if (!webSocketConnected) {
-    return;
-  }
-
-  StaticJsonDocument<300> doc;
-  doc["device"] = "esp32";
-  doc["type"] = "changeMode";
-  doc["data"] = currentMode;
-
-  String jsonString;
-  serializeJson(doc, jsonString);
-
-  webSocket.sendTXT(jsonString);
-  Serial.println("[WebSocket] Sent: " + jsonString);
-}
-
-// void changeFanSpd(int currentFan, String type, String state) {
-//   currentFan = state.toInt();
-
-//   if (!webSocketConnected) {
-//     return;
-//   }
-
-//   StaticJsonDocument<300> doc;
-//   doc["device"] = "esp32";
-//   doc["type"] = type;
-//   doc["data"] = currentFan;
-
-//   String jsonString;
-//   serializeJson(doc, jsonString);
-
-//   webSocket.sendTXT(jsonString);
-//   Serial.println("[WebSocket] Sent: " + jsonString);
-// }
+bool lastFanEnabledState = true;
 
 template <typename T>
-void sendWebSocketCommand(const String &type, const T &value,
-                          const String &state) {
+void sendWebSocketCommand(const String &type, T &value, const T &state) {
   value = state;
+
   if (!webSocketConnected) {
     return;
   }
@@ -124,6 +59,61 @@ void sendWebSocketCommand(const String &type, const T &value,
   Serial.println("[WebSocket] Sent: " + jsonString);
 }
 
+void handleManualModeLogic(bool state) {
+  if (currentMode != "manual")
+    return;
+
+  if (state == true && fanInSpeed <= 3 && fanOutSpeed <= 3) {
+    sendWebSocketCommand("changeFanInSpd", fanInSpeed, 50);
+    sendWebSocketCommand("changeFanOutSpd", fanOutSpeed, 50);
+  }
+}
+
+void handleValueSpeedForTurnOnFans() {
+  if (currentMode != "manual")
+    return;
+
+  if ((fanOutSpeed > 3 || fanInSpeed > 3) && !isFanEnabled) {
+    sendWebSocketCommand("switchState", isFanEnabled, true);
+    lastFanEnabledState = isFanEnabled;
+  }
+}
+
+void handleMinimalSpeedForTurnOffFans() {
+  if (currentMode != "manual")
+    return;
+
+  if ((fanOutSpeed <= 3 && fanInSpeed <= 3) && isFanEnabled) {
+    sendWebSocketCommand("switchState", isFanEnabled, false);
+    lastFanEnabledState = isFanEnabled;
+  }
+}
+
+void handleAutoFanSwitch() {
+  if (currentMode != "auto")
+    return;
+
+  bool shouldBeEnabled = (fanOutSpeed > 3 || fanInSpeed > 3);
+
+  if (shouldBeEnabled != isFanEnabled) {
+    sendWebSocketCommand("switchState", isFanEnabled, shouldBeEnabled);
+  }
+}
+
+void handleFanControl() {
+  if (isFanEnabled) {
+    fanToInside.setSpeedPercent(fanInSpeed);
+    fanToOutside.setSpeedPercent(fanOutSpeed);
+  } else {
+    fanToInside.setSpeedPercent(0);
+    fanToOutside.setSpeedPercent(0);
+  }
+
+  if (currentMode == "manual") {
+    handleMinimalSpeedForTurnOffFans();
+  }
+}
+
 void handleWebSocketMessage(const String &message) {
   StaticJsonDocument<200> doc;
   DeserializationError error = deserializeJson(doc, message);
@@ -136,21 +126,24 @@ void handleWebSocketMessage(const String &message) {
   if (doc.containsKey("type")) {
     if (doc["type"] == "switchState") {
       bool state = doc["data"];
+
+      handleManualModeLogic(state);
+
       sendWebSocketCommand("switchState", isFanEnabled, state);
-      // switchState(state);
     }
     if (doc["type"] == "changeMode") {
       String mode = doc["data"];
       sendWebSocketCommand("changeMode", currentMode, mode);
-      // changeMode(mode);
     }
-    if (doc["type"] == "ChangeFanInSpd") {
+    if (doc["type"] == "changeFanInSpd" && currentMode == "manual") {
       int speed = doc["data"];
-      sendWebSocketCommand("ChangeFanInSpd", fanInSpeed, speed);
+      sendWebSocketCommand("changeFanInSpd", fanInSpeed, speed);
+      handleValueSpeedForTurnOnFans();
     }
-    if (doc["type"] == "ChangeFanOutSpd") {
+    if (doc["type"] == "changeFanOutSpd" && currentMode == "manual") {
       int speed = doc["data"];
-      sendWebSocketCommand("ChangeFanOutSpd", fanOutSpeed, speed);
+      sendWebSocketCommand("changeFanOutSpd", fanOutSpeed, speed);
+      handleValueSpeedForTurnOnFans();
     }
   }
 }
@@ -292,6 +285,8 @@ void loop() {
   }
 
   handleFanControl();
+
+  handleAutoFanSwitch();
 
   delay(50);
 }
