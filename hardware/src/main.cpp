@@ -8,11 +8,11 @@
 #include <Wire.h>
 
 // WiFi налаштування
-#define WIFI_SSID "Urec_Holodec"
-#define WIFI_PASSWORD "nash526safron"
+#define WIFI_SSID "Danyil"
+#define WIFI_PASSWORD "8888888812"
 
 // WebSocket налаштування
-#define WS_HOST "192.168.31.88"
+#define WS_HOST "172.20.10.2"
 #define WS_PORT 3000
 #define WS_PATH "/ws"
 
@@ -21,8 +21,8 @@
 #define SCL_PIN 0
 
 // ГЛОБАЛЬНІ ЗМІННІ ДЛЯ ШВИДКОСТІ ВЕНТИЛЯТОРІВ
-int fanInSpeed = 30;  // Швидкість внутрішнього вентилятора (%)
-int fanOutSpeed = 30; // Швидкість зовнішнього вентилятора (%)
+int fanInSpeed = 100;  // Швидкість внутрішнього вентилятора (%)
+int fanOutSpeed = 100; // Швидкість зовнішнього вентилятора (%)
 
 FanController fanToInside(1, 0, 2, 2);
 FanController fanToOutside(42, 1, 41, 2);
