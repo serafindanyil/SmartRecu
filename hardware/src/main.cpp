@@ -7,11 +7,9 @@
 #include <WiFi.h>
 #include <Wire.h>
 
-// WiFi налаштування
 #define WIFI_SSID "Urec_Holodec"
 #define WIFI_PASSWORD "nash526safron"
 
-// WebSocket налаштування
 #define WS_HOST "192.168.31.88"
 #define WS_PORT 3000
 #define WS_PATH "/ws"
@@ -20,12 +18,12 @@
 #define SDA_PIN 45
 #define SCL_PIN 0
 
-int DEFAULT_FAN_IN_SPEED = 50;  // Швидкість внутрішнього вентилятора (%)
-int DEFAULT_FAN_OUT_SPEED = 50; // Швидкість зовнішнього вентилятора (%)
+int DEFAULT_FAN_IN_SPEED = 50;
+int DEFAULT_FAN_OUT_SPEED = 50;
 
 // ГЛОБАЛЬНІ ЗМІННІ ДЛЯ ШВИДКОСТІ ВЕНТИЛЯТОРІВ
-int fanInSpeed = DEFAULT_FAN_IN_SPEED; // Швидкість внутрішнього вентилятора (%)
-int fanOutSpeed = DEFAULT_FAN_IN_SPEED; // Швидкість зовнішнього вентилятора (%)
+int fanInSpeed = DEFAULT_FAN_IN_SPEED;
+int fanOutSpeed = DEFAULT_FAN_IN_SPEED;
 
 FanController fanToInside(1, 0, 2, 2);
 FanController fanToOutside(42, 1, 41, 2);
