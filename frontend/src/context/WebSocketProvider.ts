@@ -35,7 +35,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 	const [sensorData, setSensorData] = useState<TSensorData | null>(null);
 	const [indicatorConfig, setIndicatorConfig] =
 		useState<TAirQualityConfig | null>(null);
-	const [switchState, setSwitchState] = useState<boolean>(false);
+	const [switchState, setSwitchState] = useState<boolean>(true);
 	const [changeMode, setChangeMode] = useState<TChangeMode>("auto");
 	const [fanInSpeed, setFanInSpeed] = useState<number>(0);
 	const [fanOutSpeed, setFanOutSpeed] = useState<number>(0);
