@@ -1,13 +1,17 @@
+import App from "./App.tsx";
+import "./index.css";
+
 import { createRoot } from "react-dom/client";
 import { WebSocketProvider } from "./context/WebSocketProvider.ts";
-import "./index.css";
-import App from "./App.tsx";
+import { TimerProvider } from "./context/TimerProvider.ts";
 
 import { registerSW } from "virtual:pwa-register";
 
 createRoot(document.getElementById("root")!).render(
 	<WebSocketProvider>
-		<App />
+		<TimerProvider>
+			<App />
+		</TimerProvider>
 	</WebSocketProvider>
 );
 
