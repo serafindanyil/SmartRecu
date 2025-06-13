@@ -39,6 +39,9 @@ String currentMode = "auto";
 
 bool lastFanEnabledState = true;
 
+// Додаємо нову глобальну змінну
+bool manuallyTurnedOff = false;
+
 template <typename T>
 void sendWebSocketCommand(const String &type, T &value, const T &state) {
   value = state;
@@ -69,8 +72,22 @@ void handleManualModeLogic(bool state) {
   }
 }
 
+void handleAutoFanSwitch(const String &mode) {
+  // Ця функція відповідає за правильну зміну режиму
+  currentMode = mode;
+
+  // Скидаємо прапорець при зміні режиму
+  if (mode != "manual") {
+    manuallyTurnedOff = false;
+  }
+}
+
 void handleValueSpeedForTurnOnFans() {
   if (currentMode != "manual")
+    return;
+
+  // Важливо: не вмикати автоматично якщо користувач вимкнув вручну
+  if (manuallyTurnedOff)
     return;
 
   if ((fanOutSpeed > 3 || fanInSpeed > 3) && !isFanEnabled) {
@@ -86,17 +103,7 @@ void handleMinimalSpeedForTurnOffFans() {
   if ((fanOutSpeed <= 3 && fanInSpeed <= 3) && isFanEnabled) {
     sendWebSocketCommand("switchState", isFanEnabled, false);
     lastFanEnabledState = isFanEnabled;
-  }
-}
-
-void handleAutoFanSwitch() {
-  if (currentMode != "auto")
-    return;
-
-  bool shouldBeEnabled = (fanOutSpeed > 3 || fanInSpeed > 3);
-
-  if (shouldBeEnabled != isFanEnabled) {
-    sendWebSocketCommand("switchState", isFanEnabled, shouldBeEnabled);
+    // Не встановлюємо manuallyTurnedOff, бо це автоматичне вимкнення
   }
 }
 
@@ -127,21 +134,34 @@ void handleWebSocketMessage(const String &message) {
     if (doc["type"] == "switchState") {
       bool state = doc["data"];
 
-      handleManualModeLogic(state);
+      // Важливо: відстежуємо ручне вимкнення
+      if (!state && currentMode == "manual") {
+        manuallyTurnedOff = true;
+        Serial.println("[Manual] User manually turned OFF fans");
+      } else if (state && currentMode == "manual") {
+        manuallyTurnedOff = false;
+        Serial.println("[Manual] User manually turned ON fans");
+      }
 
+      handleManualModeLogic(state);
       sendWebSocketCommand("switchState", isFanEnabled, state);
     }
     if (doc["type"] == "changeMode") {
       String mode = doc["data"];
+      handleAutoFanSwitch(mode);
       sendWebSocketCommand("changeMode", currentMode, mode);
     }
     if (doc["type"] == "changeFanInSpd" && currentMode == "manual") {
       int speed = doc["data"];
+      if (speed > 3)
+        manuallyTurnedOff = false;
       sendWebSocketCommand("changeFanInSpd", fanInSpeed, speed);
       handleValueSpeedForTurnOnFans();
     }
     if (doc["type"] == "changeFanOutSpd" && currentMode == "manual") {
       int speed = doc["data"];
+      if (speed > 3)
+        manuallyTurnedOff = false;
       sendWebSocketCommand("changeFanOutSpd", fanOutSpeed, speed);
       handleValueSpeedForTurnOnFans();
     }
@@ -285,8 +305,6 @@ void loop() {
   }
 
   handleFanControl();
-
-  handleAutoFanSwitch();
 
   delay(50);
 }
