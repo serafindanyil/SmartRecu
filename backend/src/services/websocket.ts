@@ -1,5 +1,7 @@
 import { Server as WebSocketServer, WebSocket } from "ws";
 import { Server as HTTPServer } from "http";
+import db from "../database";
+import dayjs from "dayjs";
 
 import metrics from "../instructions/metrics.json";
 import { TMode } from "src/types/TMode";
@@ -27,12 +29,21 @@ let mode: TMode | null = null;
 let fanInSpeed: number | null = null;
 let fanOutSpeed: number | null = null;
 
-let CO2Level: number | null = null;
 let humidityLevel: number | null = null;
+let CO2Level: number | null = null;
+let tempInside: number | null = null;
+let tempOutside: number | null = null;
 
-const handleSensorUpdate = (data: { co2: number; humidity: number }) => {
+const handleSensorUpdate = (data: {
+	co2: number;
+	humidity: number;
+	tempIn: number;
+	tempOut: number;
+}) => {
 	humidityLevel = data.humidity;
 	CO2Level = data.co2;
+	tempInside = data.tempIn;
+	tempOutside = data.tempOut;
 };
 
 // Функція для надсилання статусу ESP32 всім web клієнтам
@@ -83,21 +94,26 @@ function checkAndBroadcastStatus(wss: WebSocketServer) {
 export function setupWebSocket(server: HTTPServer) {
 	const wss = new WebSocketServer({ server, path: "/ws" });
 
-	// Періодична перевірка статусу ESP32 кожні 2 секунди
 	const statusCheckInterval = setInterval(() => {
 		checkAndBroadcastStatus(wss);
 	}, 2000);
 
-	// Очищуємо інтервал при закритті сервера
+	const saveDataInterval = setInterval(() => {
+		console.log("⏰ saveSensorData interval called");
+		saveSensorData();
+		sendSensorDataToWebClients(wss);
+	}, 120000);
+
 	wss.on("close", () => {
 		clearInterval(statusCheckInterval);
+		clearInterval(saveDataInterval);
 	});
 
 	wss.on("connection", (ws: WebSocket, req) => {
 		const ip = req.socket.remoteAddress;
 		console.log(`🔌 Клієнт підключився: ${ip}`);
 
-		ws.on("message", (message: string) => {
+		ws.on("message", async (message: string) => {
 			try {
 				const parsed: MessagePayload = JSON.parse(message);
 				console.log(`📨 From ${parsed.device}:`, parsed);
@@ -283,6 +299,16 @@ export function setupWebSocket(server: HTTPServer) {
 										data: hasActiveESP32() ? "Online" : "Offline",
 									})
 								);
+
+								// Надсилаємо історію сенсорних даних
+								const latestData = await getLatestSensorData(10);
+								const message = JSON.stringify({
+									device: "server",
+									type: "sensorHistory",
+									data: latestData,
+								});
+
+								ws.send(message);
 								break;
 
 							case "switchState":
@@ -416,4 +442,89 @@ export function setupWebSocket(server: HTTPServer) {
 	});
 
 	console.log("✅ WebSocket доступний на /ws");
+}
+
+async function saveSensorData() {
+	console.log("saveSensorData called", {
+		humidityLevel,
+		CO2Level,
+		tempInside,
+		tempOutside,
+	});
+	try {
+		if (humidityLevel !== null && CO2Level !== null) {
+			await db.execute("CALL insert_humidity(?)", [humidityLevel]);
+			await db.execute("CALL insert_co2(?)", [CO2Level]);
+			await db.execute("CALL insert_temp_inside(?)", [tempInside]);
+			await db.execute("CALL insert_temp_outside(?)", [tempOutside]);
+			console.log("💾 Sensor data saved to DB (via procedures):", {
+				humidityLevel,
+				CO2Level,
+				tempInside,
+				tempOutside,
+			});
+		} else {
+			console.log("⚠️ No sensor data to save");
+		}
+	} catch (err) {
+		console.error("❌ Error saving sensor data:", err);
+	}
+}
+
+async function sendSensorDataToWebClients(wss: WebSocketServer) {
+	const latestData = await getLatestSensorData(10); // <-- тільки 10 останніх
+	const message = JSON.stringify({
+		device: "server",
+		type: "sensorHistory",
+		data: latestData,
+	});
+	wss.clients.forEach((client: WebSocket) => {
+		if (
+			client.readyState === WebSocket.OPEN &&
+			clientTypes.get(client) === "web"
+		) {
+			client.send(message);
+		}
+	});
+}
+
+async function getLatestSensorData(limit = 20) {
+	const safeLimit = Math.max(1, Math.min(limit, 100));
+	const [humidityRows] = await db.execute(
+		`SELECT humidity, timestamp FROM humidity ORDER BY timestamp DESC LIMIT ${safeLimit}`
+	);
+	const [co2Rows] = await db.execute(
+		`SELECT co2, timestamp FROM co2 ORDER BY timestamp DESC LIMIT ${safeLimit}`
+	);
+	const [tempInsideRows] = await db.execute(
+		`SELECT temp_inside, timestamp FROM temp_inside ORDER BY timestamp DESC LIMIT ${safeLimit}`
+	);
+	const [tempOutsideRows] = await db.execute(
+		`SELECT temp_outside, timestamp FROM temp_outside ORDER BY timestamp DESC LIMIT ${safeLimit}`
+	);
+
+	// Форматуємо timestamp у "HH:mm"
+	const humidity = (humidityRows as any[]).map((row) => ({
+		humidity: row.humidity,
+		time: dayjs(row.timestamp).format("HH:mm"),
+	}));
+	const co2 = (co2Rows as any[]).map((row) => ({
+		co2: row.co2,
+		time: dayjs(row.timestamp).format("HH:mm"),
+	}));
+	const tempInside = (tempInsideRows as any[]).map((row) => ({
+		tempInside: row.temp_inside,
+		time: dayjs(row.timestamp).format("HH:mm"),
+	}));
+	const tempOutside = (tempOutsideRows as any[]).map((row) => ({
+		tempOutside: row.temp_outside,
+		time: dayjs(row.timestamp).format("HH:mm"),
+	}));
+
+	return {
+		humidity,
+		co2,
+		tempInside,
+		tempOutside,
+	};
 }

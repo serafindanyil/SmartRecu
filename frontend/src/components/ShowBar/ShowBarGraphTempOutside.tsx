@@ -9,14 +9,14 @@ import {
 
 import useWebSocket from "~/hooks/useWebSocket";
 
-const ShowBarGraphHumidity = () => {
+const ShowBarGraphTempOutside = () => {
 	const { sensorHistory } = useWebSocket();
 	return (
-		<ShowBarBase title="Графік вологості" description="%">
+		<ShowBarBase title="Графік зовн. температури" description="°C">
 			<div className="w-full h-full">
 				<ResponsiveContainer width="100%" height={180}>
 					<AreaChart
-						data={sensorHistory?.humidity ?? []}
+						data={sensorHistory?.tempOutside ?? []}
 						margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
 						<defs>
 							<linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -45,7 +45,7 @@ const ShowBarGraphHumidity = () => {
 						/>
 						<Area
 							type="monotone"
-							dataKey="humidity"
+							dataKey="tempOutside"
 							stroke="rgba(56, 110, 148, 1)"
 							strokeWidth={2}
 							fill="url(#blueGradient)"
@@ -58,4 +58,4 @@ const ShowBarGraphHumidity = () => {
 	);
 };
 
-export default ShowBarGraphHumidity;
+export default ShowBarGraphTempOutside;

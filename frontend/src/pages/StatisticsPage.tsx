@@ -5,6 +5,8 @@ import ShowBarTemperature from "~/components/ShowBar/ShowBarTemperature";
 import ShowBarFan from "~/components/ShowBar/ShowBarFan";
 import ShowBarGraphCO2 from "~/components/ShowBar/ShowBarGraphCO2";
 import ShowBarGraphHumidity from "~/components/ShowBar/ShowBarGraphHumidity";
+import ShowBarGraphTempInside from "~/components/ShowBar/ShowBarGraphTempInside";
+import ShowBarGraphTempOutside from "~/components/ShowBar/ShowBarGraphTempOutside";
 
 import useWebSocket from "~/hooks/useWebSocket";
 import Indicator from "~/components/Indicator/Indicator";
@@ -38,6 +40,8 @@ export const StatisticsPage = () => {
 				<ShowBarFan description="Видування" level={sensorData?.fanOutRPM} />
 				<ShowBarGraphCO2 />
 				<ShowBarGraphHumidity />
+				<ShowBarGraphTempInside />
+				<ShowBarGraphTempOutside />
 
 				{/* <ShowBarEfficiency level={60} /> */}
 			</div>

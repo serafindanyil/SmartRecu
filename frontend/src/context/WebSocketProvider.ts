@@ -16,6 +16,7 @@ import type {
 } from "../types/TWebSocket";
 
 import type { TChangeMode } from "../types/TChangeMode";
+import type { TSensorHistory } from "../types/TSensorHistory";
 
 export const WebSocketContext = createContext<
 	TWebSocketContextType | undefined
@@ -39,6 +40,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 	const [changeMode, setChangeMode] = useState<TChangeMode>("auto");
 	const [fanInSpeed, setFanInSpeed] = useState<number>(0);
 	const [fanOutSpeed, setFanOutSpeed] = useState<number>(0);
+	const [sensorHistory, setSensorHistory] = useState<TSensorHistory | null>(
+		null
+	);
 	const [connectionStatus, setConnectionStatus] =
 		useState<TConnectionStatus>("Offline");
 	const [error, setError] = useState<string | null>(null);
@@ -123,6 +127,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 							case "changeFanOutSpd":
 								setFanOutSpeed(message.data as number);
 								break;
+							case "sensorHistory":
+								setSensorHistory(message.data as TSensorHistory);
+								break;
 							case "pong":
 								break;
 							default:
@@ -200,6 +207,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
 	const contextValue: TWebSocketContextType = {
 		sensorData,
+		sensorHistory,
 		switchState,
 		changeMode,
 		fanInSpeed,

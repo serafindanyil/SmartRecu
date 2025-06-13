@@ -32,8 +32,11 @@ export type TAirQualityConfig = {
 
 export type TConnectionStatus = "Online" | "Offline";
 
+import type { TSensorHistory } from "~/types/TSensorHistory";
+
 export interface TWebSocketContextType {
 	sensorData: TSensorData | null;
+	sensorHistory: TSensorHistory | null;
 	switchState: boolean;
 	changeMode: TChangeMode;
 	fanInSpeed: number;
