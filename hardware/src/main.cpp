@@ -20,9 +20,12 @@
 #define SDA_PIN 45
 #define SCL_PIN 0
 
+int DEFAULT_FAN_IN_SPEED = 50;  // Швидкість внутрішнього вентилятора (%)
+int DEFAULT_FAN_OUT_SPEED = 50; // Швидкість зовнішнього вентилятора (%)
+
 // ГЛОБАЛЬНІ ЗМІННІ ДЛЯ ШВИДКОСТІ ВЕНТИЛЯТОРІВ
-int fanInSpeed = 50;  // Швидкість внутрішнього вентилятора (%)
-int fanOutSpeed = 50; // Швидкість зовнішнього вентилятора (%)
+int fanInSpeed = DEFAULT_FAN_IN_SPEED; // Швидкість внутрішнього вентилятора (%)
+int fanOutSpeed = DEFAULT_FAN_IN_SPEED; // Швидкість зовнішнього вентилятора (%)
 
 FanController fanToInside(1, 0, 2, 2);
 FanController fanToOutside(42, 1, 41, 2);
@@ -62,13 +65,17 @@ void sendWebSocketCommand(const String &type, T &value, const T &state) {
   Serial.println("[WebSocket] Sent: " + jsonString);
 }
 
+void changeFansToDefaultSpeed() {
+  sendWebSocketCommand("changeFanInSpd", fanInSpeed, DEFAULT_FAN_IN_SPEED);
+  sendWebSocketCommand("changeFanOutSpd", fanOutSpeed, DEFAULT_FAN_OUT_SPEED);
+}
+
 void handleManualModeLogic(bool state) {
   if (currentMode != "manual")
     return;
 
   if (state == true && fanInSpeed <= 3 && fanOutSpeed <= 3) {
-    sendWebSocketCommand("changeFanInSpd", fanInSpeed, 50);
-    sendWebSocketCommand("changeFanOutSpd", fanOutSpeed, 50);
+    changeFansToDefaultSpeed();
   }
 }
 
@@ -134,7 +141,6 @@ void handleWebSocketMessage(const String &message) {
     if (doc["type"] == "switchState") {
       bool state = doc["data"];
 
-      // Важливо: відстежуємо ручне вимкнення
       if (!state && currentMode == "manual") {
         manuallyTurnedOff = true;
         Serial.println("[Manual] User manually turned OFF fans");
@@ -150,6 +156,14 @@ void handleWebSocketMessage(const String &message) {
       String mode = doc["data"];
       handleAutoFanSwitch(mode);
       sendWebSocketCommand("changeMode", currentMode, mode);
+      if (mode == "turbo") {
+        fanInSpeed = 100;
+        fanOutSpeed = 100;
+        isFanEnabled = true;
+      } else if (mode == "auto") {
+        fanInSpeed = DEFAULT_FAN_IN_SPEED;
+        fanOutSpeed = DEFAULT_FAN_OUT_SPEED;
+      }
     }
     if (doc["type"] == "changeFanInSpd" && currentMode == "manual") {
       int speed = doc["data"];
