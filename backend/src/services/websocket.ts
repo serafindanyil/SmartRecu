@@ -20,6 +20,21 @@ const esp32LastUpdate = new Map<WebSocket, number>();
 // Зберігаємо останній відомий статус ESP32
 let lastESP32Status: "Online" | "Offline" = "Offline";
 
+// Ініціалізовані динамічні дані з ESP32
+let switchState: boolean | null = null;
+let mode: TMode | null = null;
+
+let fanInSpeed: number | null = null;
+let fanOutSpeed: number | null = null;
+
+let CO2Level: number | null = null;
+let humidityLevel: number | null = null;
+
+const handleSensorUpdate = (data: { co2: number; humidity: number }) => {
+	humidityLevel = data.humidity;
+	CO2Level = data.co2;
+};
+
 // Функція для надсилання статусу ESP32 всім web клієнтам
 function broadcastESP32Status(
 	wss: WebSocketServer,
@@ -73,13 +88,6 @@ export function setupWebSocket(server: HTTPServer) {
 		checkAndBroadcastStatus(wss);
 	}, 2000);
 
-	// Ініціалізовані динамічні дані з ESP32
-	let switchState: boolean | null = null;
-	let mode: TMode | null = null;
-
-	let fanInSpeed: number | null = null;
-	let fanOutSpeed: number | null = null;
-
 	// Очищуємо інтервал при закритті сервера
 	wss.on("close", () => {
 		clearInterval(statusCheckInterval);
@@ -127,6 +135,8 @@ export function setupWebSocket(server: HTTPServer) {
 										);
 									}
 								});
+
+								handleSensorUpdate(parsed.data);
 
 								// Перевіряємо і оновлюємо статус
 								checkAndBroadcastStatus(wss);

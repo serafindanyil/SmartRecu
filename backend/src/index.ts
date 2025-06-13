@@ -1,5 +1,7 @@
 import express from "express";
 import http from "http";
+import db from "./database";
+
 import { setupWebSocket } from "./services/websocket";
 
 const app = express();

@@ -39,9 +39,13 @@ bool isFanEnabled = true;
 String currentMode = "auto";
 
 bool lastFanEnabledState = true;
-
-// Додаємо нову глобальну змінну
 bool manuallyTurnedOff = false;
+
+// АВТОМАТИЧНИЙ ХЕНДЛИНГ ЯКОСТІ ПОВІТРЯ
+enum AirQuality { WELL = 0, GOOD = 1, BAD = 2, POOR = 3 };
+
+const int fanInSpeedsByQualityCO2[4] = {30, 50, 75, 100};
+const int fanOutSpeedsByQualityCO2[4] = {30, 50, 75, 100};
 
 template <typename T>
 void sendWebSocketCommand(const String &type, T &value, const T &state) {
@@ -61,6 +65,67 @@ void sendWebSocketCommand(const String &type, T &value, const T &state) {
 
   webSocket.sendTXT(jsonString);
   Serial.println("[WebSocket] Sent: " + jsonString);
+}
+
+AirQuality getAirQuality(int CO2) {
+  if (CO2 <= 599)
+    return WELL;
+  if (CO2 > 600 && CO2 <= 999)
+    return GOOD;
+  if (CO2 > 1000 && CO2 <= 1500)
+    return BAD;
+  if (CO2 > 1500)
+    return POOR;
+  return POOR;
+}
+
+void handleFansByAirQuality() {
+  if (currentMode != "auto")
+    return;
+
+  int CO2 = co2Sensor.getCO2();
+  AirQuality quality = getAirQuality(CO2);
+
+  fanInSpeed = fanInSpeedsByQualityCO2[quality];
+  fanOutSpeed = fanOutSpeedsByQualityCO2[quality];
+
+  if (quality >= BAD && !isFanEnabled) {
+    sendWebSocketCommand("switchState", isFanEnabled, true);
+    lastFanEnabledState = isFanEnabled;
+  }
+}
+// ---
+
+void handleAutoModeLogicUpdate() {
+  if (currentMode != "auto")
+    return;
+
+  int CO2 = co2Sensor.getCO2();
+
+  const int PoorCO2 = CO2 > 1500;
+  const int BadCO2 = CO2 > 1000 && CO2 <= 1500;
+  const int GoodCO2 = CO2 > 600 && CO2 <= 999;
+  const int WellCO2 = CO2 <= 599;
+
+  int humidity = co2Sensor.getHumidity();
+
+  const int PoorHumidity = humidity < 30 || humidity >= 70;
+  const int BadHumidity = humidity >= 30 && humidity <= 40;
+  const int GoodHumidity = humidity >= 40 && humidity <= 60;
+  const int WellHumidity = humidity >= 45 && humidity <= 55;
+
+  bool isOutsideTempHigher =
+      tempSensor.getTemperature() > co2Sensor.getTemperature();
+
+  if (co2Sensor.getCO2() > 1000 && !isFanEnabled) {
+    sendWebSocketCommand("switchState", isFanEnabled, true);
+    lastFanEnabledState = isFanEnabled;
+  }
+
+  if (co2Sensor.getCO2() <= 800 && isFanEnabled) {
+    sendWebSocketCommand("switchState", isFanEnabled, false);
+    lastFanEnabledState = isFanEnabled;
+  }
 }
 
 void changeFansToDefaultSpeed() {
@@ -317,6 +382,7 @@ void loop() {
   }
 
   handleFanControl();
+  handleFansByAirQuality();
 
   delay(50);
 }

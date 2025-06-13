@@ -7,7 +7,9 @@
 		"dev": "nodemon --watch src --ext ts --exec \"npx ts-node src/index.ts\""
 	},
 	"dependencies": {
+		"dotenv": "^16.5.0",
 		"express": "^5.1.0",
+		"mysql2": "^3.14.1",
 		"ts-node": "^10.9.2",
 		"ws": "^8.18.2"
 	},

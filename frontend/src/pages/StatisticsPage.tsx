@@ -3,6 +3,8 @@ import ShowBarHumidity from "~/components/ShowBar/ShowBarHumidity";
 // import ShowBarEfficienty from "~/components/ShowBar/ShowBarEfficienty";
 import ShowBarTemperature from "~/components/ShowBar/ShowBarTemperature";
 import ShowBarFan from "~/components/ShowBar/ShowBarFan";
+import ShowBarGraphCO2 from "~/components/ShowBar/ShowBarGraphCO2";
+import ShowBarGraphHumidity from "~/components/ShowBar/ShowBarGraphHumidity";
 
 import useWebSocket from "~/hooks/useWebSocket";
 import Indicator from "~/components/Indicator/Indicator";
@@ -34,6 +36,8 @@ export const StatisticsPage = () => {
 
 				<ShowBarFan description="Вдування" level={sensorData?.fanInRPM} />
 				<ShowBarFan description="Видування" level={sensorData?.fanOutRPM} />
+				<ShowBarGraphCO2 />
+				<ShowBarGraphHumidity />
 
 				{/* <ShowBarEfficiency level={60} /> */}
 			</div>
