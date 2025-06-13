@@ -236,6 +236,8 @@ export function setupWebSocket(server: HTTPServer) {
 								// Пересилаємо дані сенсорів всім web клієнтам
 								switchState = parsed.data.switchState;
 								mode = parsed.data.mode;
+								fanInSpeed = parsed.data.fanInSpd;
+								fanOutSpeed = parsed.data.fanOutSpd;
 								checkAndBroadcastStatus(wss);
 								break;
 
@@ -257,6 +259,8 @@ export function setupWebSocket(server: HTTPServer) {
 											metrics: metrics,
 											switchState: switchState,
 											mode: mode,
+											fanInSpd: fanInSpeed,
+											fanOutSpd: fanOutSpeed,
 										},
 									})
 								);
@@ -313,7 +317,7 @@ export function setupWebSocket(server: HTTPServer) {
 										client.send(
 											JSON.stringify({
 												device: "server",
-												type: "ChangeFanInSpd",
+												type: "changeFanInSpd",
 												data: parsed.data,
 											})
 										);
@@ -330,7 +334,7 @@ export function setupWebSocket(server: HTTPServer) {
 										client.send(
 											JSON.stringify({
 												device: "server",
-												type: "ChangeFanOutSpd",
+												type: "changeFanOutSpd",
 												data: parsed.data,
 											})
 										);
