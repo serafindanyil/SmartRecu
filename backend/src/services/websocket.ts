@@ -301,7 +301,7 @@ export function setupWebSocket(server: HTTPServer) {
 								);
 
 								// Надсилаємо історію сенсорних даних
-								const latestData = await getLatestSensorData(10);
+								const latestData = await getLatestSensorData(20);
 								const message = JSON.stringify({
 									device: "server",
 									type: "sensorHistory",

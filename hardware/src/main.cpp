@@ -220,9 +220,9 @@ void handleWebSocketMessage(const String &message) {
       handleAutoFanSwitch(mode);
       sendWebSocketCommand("changeMode", currentMode, mode);
       if (mode == "turbo") {
-        fanInSpeed = 100;
-        fanOutSpeed = 100;
-        isFanEnabled = true;
+        sendWebSocketCommand("changeFanInSpd", fanInSpeed, 100);
+        sendWebSocketCommand("changeFanOutSpd", fanOutSpeed, 100);
+        sendWebSocketCommand("switchState", isFanEnabled, true);
       } else if (mode == "auto") {
         fanInSpeed = DEFAULT_FAN_IN_SPEED;
         fanOutSpeed = DEFAULT_FAN_OUT_SPEED;
