@@ -1,0 +1,68 @@
+.input-range {
+	@apply flex flex-col items-center gap-2 w-full;
+
+	&__slider {
+		@apply w-full bg-blue-400 rounded-[25px] outline-none cursor-pointer relative;
+		height: 3.125rem; // 50px
+		padding: 0.25rem; // 4px
+		-webkit-appearance: none;
+		appearance: none;
+
+		// Track (дорожка)
+		&::-webkit-slider-track {
+			@apply w-full bg-white-100 border-none;
+			height: 100%;
+			border-radius: 1.5625rem; // 25px
+		}
+
+		&::-moz-range-track {
+			@apply w-full bg-white-100 border-none;
+			height: 100%;
+			border-radius: 1.5625rem; // 25px
+		}
+
+		// Thumb (повзунок) - білий круг
+		&::-webkit-slider-thumb {
+			@apply bg-white-100 border-none rounded-full cursor-pointer;
+			-webkit-appearance: none;
+			appearance: none;
+			width: 2.625rem; // 42px (50px - 8px padding)
+			height: 2.625rem; // 42px
+			box-shadow: none;
+
+			&:hover {
+				box-shadow: none;
+			}
+
+			&:active {
+				box-shadow: none;
+			}
+		}
+
+		&::-moz-range-thumb {
+			@apply bg-white-100 border-none rounded-full cursor-pointer;
+			width: 2.625rem; // 42px
+			height: 2.625rem; // 42px
+			box-shadow: none;
+		}
+
+		// Disabled state
+		&:disabled {
+			@apply opacity-50 cursor-not-allowed bg-gray-200;
+
+			&::-webkit-slider-thumb {
+				@apply cursor-not-allowed bg-gray-300;
+
+				&:hover {
+					@apply bg-gray-300;
+					transform: none;
+					box-shadow: none;
+				}
+			}
+
+			&::-moz-range-thumb {
+				@apply cursor-not-allowed bg-gray-300;
+			}
+		}
+	}
+}

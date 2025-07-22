@@ -1,6 +1,10 @@
 import Logo from "~/assets/logo.svg?react";
+import useWebSocket from "~/hooks/useWebSocket";
 
-const Header = ({ className = "", version = "0.1", isOnline = false }) => {
+const Header = ({ className = "", version = "0.1" }) => {
+	const { connectionStatus } = useWebSocket();
+	const isOnline = connectionStatus === "Online";
+
 	return (
 		<header
 			className={`${className} sticky top-0 z-50 pt-4 pb-8 bg-gradient-to-b gradient-background`}>
@@ -16,7 +20,7 @@ const Header = ({ className = "", version = "0.1", isOnline = false }) => {
 					className={`font-bold ${
 						isOnline ? "text-blue-500" : "text-red-100"
 					}`}>
-					{isOnline ? "Online" : "Offline"}
+					{connectionStatus}
 				</span>
 			</div>
 		</header>

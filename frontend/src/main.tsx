@@ -1,14 +1,18 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import "./index.css";
 import App from "./App.tsx";
+import "./index.css";
+
+import { createRoot } from "react-dom/client";
+import { WebSocketProvider } from "./context/WebSocketProvider.ts";
+import { TimerProvider } from "./context/TimerProvider.ts";
 
 import { registerSW } from "virtual:pwa-register";
 
 createRoot(document.getElementById("root")!).render(
-	<StrictMode>
-		<App />
-	</StrictMode>
+	<WebSocketProvider>
+		<TimerProvider>
+			<App />
+		</TimerProvider>
+	</WebSocketProvider>
 );
 
 registerSW({ immediate: true });

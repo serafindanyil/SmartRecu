@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
 	BrowserRouter as Router,
 	Routes,
@@ -13,7 +14,21 @@ import HomePage from "./pages/HomePage";
 import StatisticsPage from "./pages/StatisticsPage";
 import SettingsPage from "./pages/SettingsPage";
 
+import useWebSocket from "~/hooks/useWebSocket";
+import { useTimer } from "~/context/TimerProvider";
+
 function App() {
+	const { startTurboTimer, resetTurboTimer, isTimerActive } = useTimer();
+	const { changeMode } = useWebSocket();
+
+	useEffect(() => {
+		if (changeMode === "turbo" && !isTimerActive) {
+			startTurboTimer();
+		} else if (changeMode !== "turbo" && isTimerActive) {
+			resetTurboTimer();
+		}
+	}, [changeMode, isTimerActive, startTurboTimer]);
+
 	return (
 		<Router>
 			<div className="relative">

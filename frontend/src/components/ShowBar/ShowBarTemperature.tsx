@@ -8,7 +8,7 @@ const ShowBarTemperature = ({
 }: TLevelIndicator & { description: string }) => {
 	return (
 		<ShowBarBase title="Температура" description={description} {...props}>
-			<p className="header-indicator">{level} °C</p>
+			<p className="header-indicator">{level ?? ": ("} °C</p>
 		</ShowBarBase>
 	);
 };

@@ -1,10 +1,10 @@
 import ShowBarBase from "./ShowBarBase";
 import type { TLevelIndicator } from "~/types/TIndicator";
 
-const ShowBarHumidity = ({ level }: TLevelIndicator) => {
+const ShowBarHumidity = ({ level, ...props }: TLevelIndicator) => {
 	return (
-		<ShowBarBase title="Вологість" description={"Дуже добре"}>
-			<p className="header-indicator">{level} %</p>
+		<ShowBarBase title="Вологість" {...props}>
+			<p className="header-indicator">{level ?? ": ("} %</p>
 		</ShowBarBase>
 	);
 };

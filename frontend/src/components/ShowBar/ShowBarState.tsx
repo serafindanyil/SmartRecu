@@ -1,20 +1,20 @@
 import ShowBarBase from "./ShowBarBase";
-import { useState } from "react";
 import ButtonToggle from "../Button/ButtonToggle";
+import useWebSocket from "~/hooks/useWebSocket";
 
 const ShowBarState = () => {
-	const [isEnabled, setIsEnabled] = useState(false);
+	const { switchState, sendMessage } = useWebSocket();
 
-	const toggleSwitch = () => {
-		setIsEnabled((prev) => !prev);
+	const handleToggleState = () => {
+		sendMessage("switchState", !switchState);
 	};
 
 	return (
 		<ShowBarBase
 			title="Стан"
-			description={isEnabled ? "Увімкнено" : "Вимкнено"}>
+			description={switchState ? "Увімкнено" : "Вимкнено"}>
 			<div className="flex flex-row justify-end">
-				<ButtonToggle isEnabled={isEnabled} onClick={toggleSwitch} />
+				<ButtonToggle isEnabled={switchState} onClick={handleToggleState} />
 			</div>
 		</ShowBarBase>
 	);

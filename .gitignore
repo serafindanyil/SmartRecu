@@ -1,4 +1,8 @@
 .DS_Store
 /node_modules
+<<<<<<< Updated upstream
 /frontend/node_modules
+=======
+>>>>>>> Stashed changes
 /backend/node_modules
+/frontend
