@@ -4,25 +4,25 @@
 	"main": "index.js",
 	"license": "MIT",
 	"scripts": {
-		"dev": "nodemon --watch src --ext ts --exec \"npx ts-node src/index.ts\"",
-		"build": "tsc",
-		"start": "node dist/index.js"
+		"dev": "nodemon --watch src --ext ts --exec \"ts-node src/index.ts\"",
+		"build": "tsc -p tsconfig.json",
+		"start": "node dist/index.js",
+		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
 		"dayjs": "^1.11.13",
 		"dotenv": "^16.5.0",
 		"express": "^5.1.0",
-		"mysql2": "^3.14.1",
 		"pg": "^8.16.3",
 		"ts-node": "^10.9.2",
 		"ws": "^8.18.2"
 	},
 	"devDependencies": {
 		"@types/express": "^5.0.3",
-		"@types/node": "^22.15.30",
+		"@types/node": "^24.3.1",
 		"@types/pg": "^8.15.5",
 		"@types/ws": "^8.18.1",
 		"nodemon": "^3.1.10",
-		"typescript": "^5.8.3"
+		"typescript": "^5.9.2"
 	}
 }

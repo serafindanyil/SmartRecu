@@ -1,40 +1,60 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const promise_1 = __importDefault(require("mysql2/promise"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const pg_1 = require("pg");
 dotenv_1.default.config();
-const pool = promise_1.default.createPool({
+// Replace MySQL-style "?" placeholders with PostgreSQL "$1, $2, ..."
+function toPgPlaceholders(sql) {
+    let index = 0;
+    return sql.replace(/\?/g, () => `$${++index}`);
+}
+function toBoolean(value, fallback = false) {
+    if (value == null)
+        return fallback;
+    const v = value.trim().toLowerCase();
+    return v === "true" || v === "1" || v === "yes";
+}
+const DEFAULT_MAX_CLIENTS = 10;
+const DEFAULT_IDLE_TIMEOUT_MS = 30000;
+const DEFAULT_CONN_TIMEOUT_MS = 10000;
+const SSL_ENABLED = toBoolean(process.env.DB_SSL, true);
+const SSL_REJECT_UNAUTHORIZED = toBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, false);
+const pool = new pg_1.Pool({
     host: process.env.DB_HOST,
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
+    ssl: SSL_ENABLED
+        ? { rejectUnauthorized: SSL_REJECT_UNAUTHORIZED }
+        : undefined,
+    max: DEFAULT_MAX_CLIENTS,
+    idleTimeoutMillis: DEFAULT_IDLE_TIMEOUT_MS,
+    connectionTimeoutMillis: DEFAULT_CONN_TIMEOUT_MS,
 });
-const testConnection = () => __awaiter(void 0, void 0, void 0, function* () {
+pool.on("error", (err) => {
+    console.error("❌ Postgres pool error:", err);
+});
+async function execute(sql, params = []) {
+    const text = toPgPlaceholders(sql);
+    // pg typings expect mutable array
+    const values = Array.isArray(params) ? [...params] : [];
+    const res = await pool.query(text, values);
+    return [res.rows];
+}
+async function testConnection() {
     try {
-        const connection = yield pool.getConnection();
+        await pool.query("SELECT 1");
         console.log("✅ Database connected successfully");
-        connection.release();
     }
     catch (error) {
         console.error("❌ Database connection failed:", error);
         process.exit(1);
     }
-});
-testConnection();
-exports.default = pool;
+}
+void testConnection();
+const db = { execute, pool };
+exports.default = db;
