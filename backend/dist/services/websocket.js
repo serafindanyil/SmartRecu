@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -89,7 +80,7 @@ function setupWebSocket(server) {
     wss.on("connection", (ws, req) => {
         const ip = req.socket.remoteAddress;
         console.log(`🔌 Клієнт підключився: ${ip}`);
-        ws.on("message", (message) => __awaiter(this, void 0, void 0, function* () {
+        ws.on("message", async (message) => {
             try {
                 const parsed = JSON.parse(message);
                 console.log(`📨 From ${parsed.device}:`, parsed);
@@ -234,7 +225,7 @@ function setupWebSocket(server) {
                                     data: hasActiveESP32() ? "Online" : "Offline",
                                 }));
                                 // Надсилаємо історію сенсорних даних
-                                const latestData = yield getLatestSensorData(20);
+                                const latestData = await getLatestSensorData(20);
                                 const message = JSON.stringify({
                                     device: "server",
                                     type: "sensorHistory",
@@ -305,7 +296,7 @@ function setupWebSocket(server) {
             catch (err) {
                 console.error("❌ Помилка парсингу повідомлення:", err, "Повідомлення:", message);
             }
-        }));
+        });
         ws.on("close", (code, reason) => {
             const clientType = clientTypes.get(ws);
             console.log(`❌ Клієнт ${clientType || "невідомий"} відключився (код: ${code})`);
@@ -337,81 +328,75 @@ function setupWebSocket(server) {
     });
     console.log("✅ WebSocket доступний на /ws");
 }
-function saveSensorData() {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log("saveSensorData called", {
-            humidityLevel,
-            CO2Level,
-            tempInside,
-            tempOutside,
-        });
-        try {
-            if (humidityLevel !== null && CO2Level !== null) {
-                yield database_1.default.execute("CALL insert_humidity(?)", [humidityLevel]);
-                yield database_1.default.execute("CALL insert_co2(?)", [CO2Level]);
-                yield database_1.default.execute("CALL insert_temp_inside(?)", [tempInside]);
-                yield database_1.default.execute("CALL insert_temp_outside(?)", [tempOutside]);
-                console.log("💾 Sensor data saved to DB (via procedures):", {
-                    humidityLevel,
-                    CO2Level,
-                    tempInside,
-                    tempOutside,
-                });
-            }
-            else {
-                console.log("⚠️ No sensor data to save");
-            }
+async function saveSensorData() {
+    console.log("saveSensorData called", {
+        humidityLevel,
+        CO2Level,
+        tempInside,
+        tempOutside,
+    });
+    try {
+        if (humidityLevel !== null && CO2Level !== null) {
+            await database_1.default.execute("CALL insert_humidity(?)", [humidityLevel]);
+            await database_1.default.execute("CALL insert_co2(?)", [CO2Level]);
+            await database_1.default.execute("CALL insert_temp_inside(?)", [tempInside]);
+            await database_1.default.execute("CALL insert_temp_outside(?)", [tempOutside]);
+            console.log("💾 Sensor data saved to DB (via procedures):", {
+                humidityLevel,
+                CO2Level,
+                tempInside,
+                tempOutside,
+            });
         }
-        catch (err) {
-            console.error("❌ Error saving sensor data:", err);
+        else {
+            console.log("⚠️ No sensor data to save");
+        }
+    }
+    catch (err) {
+        console.error("❌ Error saving sensor data:", err);
+    }
+}
+async function sendSensorDataToWebClients(wss) {
+    const latestData = await getLatestSensorData(10); // <-- тільки 10 останніх
+    const message = JSON.stringify({
+        device: "server",
+        type: "sensorHistory",
+        data: latestData,
+    });
+    wss.clients.forEach((client) => {
+        if (client.readyState === ws_1.WebSocket.OPEN &&
+            clientTypes.get(client) === "web") {
+            client.send(message);
         }
     });
 }
-function sendSensorDataToWebClients(wss) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const latestData = yield getLatestSensorData(10); // <-- тільки 10 останніх
-        const message = JSON.stringify({
-            device: "server",
-            type: "sensorHistory",
-            data: latestData,
-        });
-        wss.clients.forEach((client) => {
-            if (client.readyState === ws_1.WebSocket.OPEN &&
-                clientTypes.get(client) === "web") {
-                client.send(message);
-            }
-        });
-    });
-}
-function getLatestSensorData() {
-    return __awaiter(this, arguments, void 0, function* (limit = 20) {
-        const safeLimit = Math.max(1, Math.min(limit, 100));
-        const [humidityRows] = yield database_1.default.execute(`SELECT humidity, timestamp FROM humidity ORDER BY timestamp DESC LIMIT ${safeLimit}`);
-        const [co2Rows] = yield database_1.default.execute(`SELECT co2, timestamp FROM co2 ORDER BY timestamp DESC LIMIT ${safeLimit}`);
-        const [tempInsideRows] = yield database_1.default.execute(`SELECT temp_inside, timestamp FROM temp_inside ORDER BY timestamp DESC LIMIT ${safeLimit}`);
-        const [tempOutsideRows] = yield database_1.default.execute(`SELECT temp_outside, timestamp FROM temp_outside ORDER BY timestamp DESC LIMIT ${safeLimit}`);
-        // Форматуємо timestamp у "HH:mm"
-        const humidity = humidityRows.map((row) => ({
-            humidity: row.humidity,
-            time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
-        }));
-        const co2 = co2Rows.map((row) => ({
-            co2: row.co2,
-            time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
-        }));
-        const tempInside = tempInsideRows.map((row) => ({
-            tempInside: row.temp_inside,
-            time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
-        }));
-        const tempOutside = tempOutsideRows.map((row) => ({
-            tempOutside: row.temp_outside,
-            time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
-        }));
-        return {
-            humidity,
-            co2,
-            tempInside,
-            tempOutside,
-        };
-    });
+async function getLatestSensorData(limit = 20) {
+    const safeLimit = Math.max(1, Math.min(limit, 100));
+    const [humidityRows] = await database_1.default.execute(`SELECT humidity, timestamp FROM humidity ORDER BY timestamp DESC LIMIT ${safeLimit}`);
+    const [co2Rows] = await database_1.default.execute(`SELECT co2, timestamp FROM co2 ORDER BY timestamp DESC LIMIT ${safeLimit}`);
+    const [tempInsideRows] = await database_1.default.execute(`SELECT temp_inside, timestamp FROM temp_inside ORDER BY timestamp DESC LIMIT ${safeLimit}`);
+    const [tempOutsideRows] = await database_1.default.execute(`SELECT temp_outside, timestamp FROM temp_outside ORDER BY timestamp DESC LIMIT ${safeLimit}`);
+    // Форматуємо timestamp у "HH:mm"
+    const humidity = humidityRows.map((row) => ({
+        humidity: row.humidity,
+        time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
+    }));
+    const co2 = co2Rows.map((row) => ({
+        co2: row.co2,
+        time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
+    }));
+    const tempInside = tempInsideRows.map((row) => ({
+        tempInside: row.temp_inside,
+        time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
+    }));
+    const tempOutside = tempOutsideRows.map((row) => ({
+        tempOutside: row.temp_outside,
+        time: (0, dayjs_1.default)(row.timestamp).format("HH:mm"),
+    }));
+    return {
+        humidity,
+        co2,
+        tempInside,
+        tempOutside,
+    };
 }
