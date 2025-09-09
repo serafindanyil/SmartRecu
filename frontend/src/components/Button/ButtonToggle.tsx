@@ -1,5 +1,5 @@
 import ButtonBase from "../Button/ButtonBase";
-import SwitchState from "../../assets/switch-state.svg?react";
+import SwitchState from "~/assets/switch-state.svg?react";
 
 interface ShowBarBaseProps
 	extends React.ButtonHTMLAttributes<HTMLButtonElement> {

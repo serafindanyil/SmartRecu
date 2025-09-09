@@ -6,6 +6,7 @@ import { WebSocketProvider } from "./context/WebSocketProvider.ts";
 import { TimerProvider } from "./context/TimerProvider.ts";
 
 import { registerSW } from "virtual:pwa-register";
+registerSW();
 
 createRoot(document.getElementById("root")!).render(
 	<WebSocketProvider>
@@ -14,5 +15,3 @@ createRoot(document.getElementById("root")!).render(
 		</TimerProvider>
 	</WebSocketProvider>
 );
-
-registerSW({ immediate: true });
