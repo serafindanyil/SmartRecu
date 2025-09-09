@@ -10,9 +10,9 @@
 #define WIFI_SSID "Urec_Holodec"
 #define WIFI_PASSWORD "nash526safron"
 
-#define WS_HOST "192.168.31.89"
+#define WS_HOST "18.156.158.53"
 #define WS_PORT 3000
-#define WS_PATH "/ws"
+#define WS_PATH "/wss"
 
 #define SDA_PIN 45
 #define SCL_PIN 0
