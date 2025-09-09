@@ -10,18 +10,16 @@
 #define WIFI_SSID "Urec_Holodec"
 #define WIFI_PASSWORD "nash526safron"
 
-#define WS_HOST "192.168.31.88"
+#define WS_HOST "192.168.31.89"
 #define WS_PORT 3000
 #define WS_PATH "/ws"
 
-// I2C піни для SCD40
 #define SDA_PIN 45
 #define SCL_PIN 0
 
 int DEFAULT_FAN_IN_SPEED = 50;
 int DEFAULT_FAN_OUT_SPEED = 50;
 
-// ГЛОБАЛЬНІ ЗМІННІ ДЛЯ ШВИДКОСТІ ВЕНТИЛЯТОРІВ
 int fanInSpeed = DEFAULT_FAN_IN_SPEED;
 int fanOutSpeed = DEFAULT_FAN_IN_SPEED;
 
