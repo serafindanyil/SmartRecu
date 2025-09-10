@@ -47,7 +47,10 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 		useState<TConnectionStatus>("Offline");
 	const [error, setError] = useState<string | null>(null);
 
-	const url = import.meta.env.VITE_WEBSOCKET_URL;
+	const url =
+		import.meta.env.VITE_WEBSOCKET_URL ||
+		`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
+
 	const maxReconnectAttempts = 5;
 	const reconnectDelay = 3000;
 
