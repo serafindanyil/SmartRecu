@@ -94,6 +94,8 @@ function checkAndBroadcastStatus(wss: WebSocketServer) {
 export function setupWebSocket(server: HTTPServer) {
 	const wss = new WebSocketServer({ server, path: "/ws" });
 
+	const HEARTBEAT_MS = 30000;
+
 	const statusCheckInterval = setInterval(() => {
 		checkAndBroadcastStatus(wss);
 	}, 2000);
@@ -112,6 +114,14 @@ export function setupWebSocket(server: HTTPServer) {
 	wss.on("connection", (ws: WebSocket, req) => {
 		const ip = req.socket.remoteAddress;
 		console.log(`🔌 Клієнт підключився: ${ip}`);
+
+		// Mark alive on pong
+		// @ts-expect-error augment
+		ws.isAlive = true;
+		ws.on("pong", () => {
+			// @ts-expect-error augment
+			ws.isAlive = true;
+		});
 
 		ws.on("message", async (message: string) => {
 			try {
@@ -440,6 +450,15 @@ export function setupWebSocket(server: HTTPServer) {
 			}
 		});
 	});
+
+	// Ping clients periodically
+	setInterval(() => {
+		wss.clients.forEach((ws: any) => {
+			if (!ws.isAlive) return ws.terminate();
+			ws.isAlive = false;
+			ws.ping();
+		});
+	}, HEARTBEAT_MS);
 
 	console.log("✅ WebSocket доступний на /ws");
 }
