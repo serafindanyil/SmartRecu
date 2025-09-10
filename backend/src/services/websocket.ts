@@ -466,21 +466,22 @@ export function setupWebSocket(server: HTTPServer) {
 
 async function getLatestSensorData(limit = 10) {
 	const safeLimit = Math.max(1, Math.min(limit, 100));
-	// Only needed fields; format time as "HH:mm" in code that consumes if required
 	const [humidityRows] = await db.execute(
-		`SELECT humidity, timestamp FROM humidity ORDER BY timestamp DESC LIMIT ${safeLimit}`
+		`SELECT humidity, timestamp FROM humidity ORDER BY timestamp DESC LIMIT ?`,
+		[safeLimit]
 	);
 	const [co2Rows] = await db.execute(
-		`SELECT co2, timestamp FROM co2 ORDER BY timestamp DESC LIMIT ${safeLimit}`
+		`SELECT co2, timestamp FROM co2 ORDER BY timestamp DESC LIMIT ?`,
+		[safeLimit]
 	);
 	return {
 		humidity: (humidityRows as any[]).map((r) => ({
 			humidity: Number(r.humidity),
-			timestamp: new Date(r.timestamp).toISOString(), // let FE format to HH:mm
+			timestamp: dayjs(r.timestamp).format("HH:mm"),
 		})),
 		co2: (co2Rows as any[]).map((r) => ({
 			co2: Number(r.co2),
-			timestamp: new Date(r.timestamp).toISOString(),
+			timestamp: dayjs(r.timestamp).format("HH:mm"),
 		})),
 	};
 }
@@ -522,20 +523,30 @@ async function saveSensorData(wss: WebSocketServer) {
 
 	try {
 		if (humidityLevel !== null && CO2Level !== null) {
-			await db.execute("CALL insert_humidity(?)", [humidityLevel]);
-			await db.execute("CALL insert_co2(?)", [CO2Level]);
+			// Replace CALL ... with direct INSERTs for PostgreSQL
+			await db.execute(`INSERT INTO humidity (humidity) VALUES (?)`, [
+				humidityLevel,
+			]);
+			await db.execute(`INSERT INTO co2 (co2) VALUES (?)`, [CO2Level]);
+
 			if (typeof tempInside === "number") {
-				await db.execute("CALL insert_temp_inside(?)", [tempInside]);
+				await db.execute(`INSERT INTO temp_inside (temp_inside) VALUES (?)`, [
+					tempInside,
+				]);
 			}
 			if (typeof tempOutside === "number") {
-				await db.execute("CALL insert_temp_outside(?)", [tempOutside]);
+				await db.execute(`INSERT INTO temp_outside (temp_outside) VALUES (?)`, [
+					tempOutside,
+				]);
 			}
-			console.log("💾 Sensor data saved to DB (via procedures):", {
+
+			console.log("💾 Sensor data saved to DB:", {
 				humidityLevel,
 				CO2Level,
 				tempInside,
 				tempOutside,
 			});
+
 			await sendSensorDataToWebClients(wss);
 		} else {
 			console.log("⚠️ No sensor data to save");

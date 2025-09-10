@@ -11,8 +11,8 @@
 #define WIFI_PASSWORD "nash526safron"
 
 #define WS_HOST "smartrecu.onrender.com"
-#define WS_PORT 3000
-#define WS_PATH "/wss"
+#define WS_PORT 443
+#define WS_PATH "/ws"
 
 #define SDA_PIN 45
 #define SCL_PIN 0
@@ -354,9 +354,15 @@ void setup() {
     delay(2000);
 
     Serial.println("[WebSocket] Initializing...");
-    webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
+    // --- WSS (TLS) підключення ---
+    // У проді краще використати CA: webSocket.setCACert(root_ca);
+    // Тимчасово (dev) можна розкоментувати:
+    // webSocket.setInsecure();
+
+    webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
     webSocket.onEvent(webSocketEvent);
     webSocket.setReconnectInterval(5000);
+    webSocket.enableHeartbeat(15000, 3000, 2); // ping/pong
     Serial.println("[WebSocket] Initialized");
   } else {
     Serial.println("\n[WiFi] Failed to connect!");
