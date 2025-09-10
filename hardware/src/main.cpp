@@ -10,7 +10,7 @@
 #define WIFI_SSID "Urec_Holodec"
 #define WIFI_PASSWORD "nash526safron"
 
-#define WS_HOST "18.156.158.53"
+#define WS_HOST "smartrecu.onrender.com"
 #define WS_PORT 3000
 #define WS_PATH "/wss"
 
