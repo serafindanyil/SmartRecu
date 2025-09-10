@@ -6,12 +6,21 @@ import { setupWebSocket } from "./services/websocket";
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-const server = http.createServer(); // No HTTPS here; Render terminates TLS
-setupWebSocket(server);
+async function start() {
+	try {
+		const server = http.createServer();
+		setupWebSocket(server);
 
-server.listen(PORT, "0.0.0.0", () => {
-	console.log(`Server is running on port ${PORT}`);
-});
+		server.listen(PORT, "0.0.0.0", () => {
+			console.log(`Server is running on port ${PORT}`);
+		});
+	} catch (err) {
+		console.error("❌ Failed to start server:", err);
+		process.exit(1);
+	}
+}
+
+void start();
 
 app.get("/status", (_, res) => {
 	res.json({ status: "ok" });

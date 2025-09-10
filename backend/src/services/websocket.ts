@@ -102,8 +102,9 @@ export function setupWebSocket(server: HTTPServer) {
 
 	const saveDataInterval = setInterval(() => {
 		console.log("⏰ saveSensorData interval called");
-		saveSensorData();
-		sendSensorDataToWebClients(wss);
+		saveSensorData(wss);
+		// If saveSensorData already broadcasts, you can remove the next line to avoid double send:
+		// sendSensorDataToWebClients(wss);
 	}, 120000);
 
 	wss.on("close", () => {
@@ -463,87 +464,83 @@ export function setupWebSocket(server: HTTPServer) {
 	console.log("✅ WebSocket доступний на /ws");
 }
 
-async function saveSensorData() {
-	console.log("saveSensorData called", {
-		humidityLevel,
-		CO2Level,
-		tempInside,
-		tempOutside,
-	});
-	try {
-		if (humidityLevel !== null && CO2Level !== null) {
-			await db.execute("CALL insert_humidity(?)", [humidityLevel]);
-			await db.execute("CALL insert_co2(?)", [CO2Level]);
-			await db.execute("CALL insert_temp_inside(?)", [tempInside]);
-			await db.execute("CALL insert_temp_outside(?)", [tempOutside]);
-			console.log("💾 Sensor data saved to DB (via procedures):", {
-				humidityLevel,
-				CO2Level,
-				tempInside,
-				tempOutside,
-			});
-		} else {
-			console.log("⚠️ No sensor data to save");
-		}
-	} catch (err) {
-		console.error("❌ Error saving sensor data:", err);
-	}
-}
-
-async function sendSensorDataToWebClients(wss: WebSocketServer) {
-	const latestData = await getLatestSensorData(10); // <-- тільки 10 останніх
-	const message = JSON.stringify({
-		device: "server",
-		type: "sensorHistory",
-		data: latestData,
-	});
-	wss.clients.forEach((client: WebSocket) => {
-		if (
-			client.readyState === WebSocket.OPEN &&
-			clientTypes.get(client) === "web"
-		) {
-			client.send(message);
-		}
-	});
-}
-
-async function getLatestSensorData(limit = 20) {
+async function getLatestSensorData(limit = 10) {
 	const safeLimit = Math.max(1, Math.min(limit, 100));
+	// Only needed fields; format time as "HH:mm" in code that consumes if required
 	const [humidityRows] = await db.execute(
 		`SELECT humidity, timestamp FROM humidity ORDER BY timestamp DESC LIMIT ${safeLimit}`
 	);
 	const [co2Rows] = await db.execute(
 		`SELECT co2, timestamp FROM co2 ORDER BY timestamp DESC LIMIT ${safeLimit}`
 	);
-	const [tempInsideRows] = await db.execute(
-		`SELECT temp_inside, timestamp FROM temp_inside ORDER BY timestamp DESC LIMIT ${safeLimit}`
-	);
-	const [tempOutsideRows] = await db.execute(
-		`SELECT temp_outside, timestamp FROM temp_outside ORDER BY timestamp DESC LIMIT ${safeLimit}`
-	);
-
-	// Форматуємо timestamp у "HH:mm"
-	const humidity = (humidityRows as any[]).map((row) => ({
-		humidity: row.humidity,
-		time: dayjs(row.timestamp).format("HH:mm"),
-	}));
-	const co2 = (co2Rows as any[]).map((row) => ({
-		co2: row.co2,
-		time: dayjs(row.timestamp).format("HH:mm"),
-	}));
-	const tempInside = (tempInsideRows as any[]).map((row) => ({
-		tempInside: row.temp_inside,
-		time: dayjs(row.timestamp).format("HH:mm"),
-	}));
-	const tempOutside = (tempOutsideRows as any[]).map((row) => ({
-		tempOutside: row.temp_outside,
-		time: dayjs(row.timestamp).format("HH:mm"),
-	}));
-
 	return {
-		humidity,
-		co2,
+		humidity: (humidityRows as any[]).map((r) => ({
+			humidity: Number(r.humidity),
+			timestamp: new Date(r.timestamp).toISOString(), // let FE format to HH:mm
+		})),
+		co2: (co2Rows as any[]).map((r) => ({
+			co2: Number(r.co2),
+			timestamp: new Date(r.timestamp).toISOString(),
+		})),
+	};
+}
+
+async function sendSensorDataToWebClients(wss: WebSocketServer) {
+	try {
+		const latestData = await getLatestSensorData(10);
+		const message = JSON.stringify({
+			device: "server",
+			type: "sensorHistory",
+			data: latestData,
+		});
+		wss.clients.forEach((client: WebSocket) => {
+			if (
+				client.readyState === WebSocket.OPEN &&
+				clientTypes.get(client) === "web"
+			) {
+				client.send(message);
+			}
+		});
+	} catch (err) {
+		console.error("❌ Failed to send sensor history to clients:", err);
+	}
+}
+
+async function saveSensorData(wss: WebSocketServer) {
+	// Do not save when ESP32 is offline
+	if (!hasActiveESP32()) {
+		console.log("⏭️ Skip save: ESP32 offline");
+		return;
+	}
+
+	console.log("saveSensorData called", {
+		humidityLevel,
+		CO2Level,
 		tempInside,
 		tempOutside,
-	};
+	});
+
+	try {
+		if (humidityLevel !== null && CO2Level !== null) {
+			await db.execute("CALL insert_humidity(?)", [humidityLevel]);
+			await db.execute("CALL insert_co2(?)", [CO2Level]);
+			if (typeof tempInside === "number") {
+				await db.execute("CALL insert_temp_inside(?)", [tempInside]);
+			}
+			if (typeof tempOutside === "number") {
+				await db.execute("CALL insert_temp_outside(?)", [tempOutside]);
+			}
+			console.log("💾 Sensor data saved to DB (via procedures):", {
+				humidityLevel,
+				CO2Level,
+				tempInside,
+				tempOutside,
+			});
+			await sendSensorDataToWebClients(wss);
+		} else {
+			console.log("⚠️ No sensor data to save");
+		}
+	} catch (err) {
+		console.error("❌ Error saving sensor data:", err);
+	}
 }
