@@ -7,11 +7,21 @@ const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const websocket_1 = require("./services/websocket");
 const app = (0, express_1.default)();
-const server = http_1.default.createServer(app);
-(0, websocket_1.setupWebSocket)(server);
-server.listen(3000, () => {
-    console.log(`Server is running on port 3000`);
-});
+const PORT = Number(process.env.PORT) || 3000;
+async function start() {
+    try {
+        const server = http_1.default.createServer();
+        (0, websocket_1.setupWebSocket)(server);
+        server.listen(PORT, "0.0.0.0", () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    }
+    catch (err) {
+        console.error("❌ Failed to start server:", err);
+        process.exit(1);
+    }
+}
+void start();
 app.get("/status", (_, res) => {
     res.json({ status: "ok" });
 });
