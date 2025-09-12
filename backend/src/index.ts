@@ -2,37 +2,50 @@ import express from "express";
 import http from "http";
 import { setupWebSocket } from "./services/websocket";
 
-const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+const HOST = "0.0.0.0";
 
-async function start() {
-	try {
-		const server = http.createServer((req, res) => {
-			if (req.url === "/health") {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				return res.end(JSON.stringify({ status: "ok" }));
-			}
-			if (req.url === "/") {
-				res.writeHead(200, { "Content-Type": "text/plain" });
-				return res.end("SmartRecu backend alive");
-			}
-			res.writeHead(404);
-			res.end();
-		});
+const app = express();
 
-		setupWebSocket(server);
+// --- Health & root endpoints (важливо для Render port scan) ---
+app.get("/health", (_req, res) => {
+	res.status(200).json({ status: "ok" });
+});
+app.get("/", (_req, res) => {
+	res.status(200).type("text/plain").send("SmartRecu backend alive");
+});
 
-		server.listen(PORT, "0.0.0.0", () => {
-			console.log(`Server is running on port ${PORT}`);
-		});
-	} catch (err) {
-		console.error("❌ Failed to start server:", err);
-		process.exit(1);
-	}
-}
-
-void start();
-
-app.get("/status", (_, res) => {
+// (Опційно) статус для внутрішніх перевірок
+app.get("/status", (_req, res) => {
 	res.json({ status: "ok" });
 });
+
+async function start() {
+	console.log("🚀 Starting SmartRecu backend...");
+
+	const server = http.createServer(app);
+
+	server.on("error", (err) => {
+		console.error("❌ HTTP server error:", err);
+	});
+
+	// Налаштування для стабільності
+	server.keepAliveTimeout = 65000;
+	// @ts-ignore
+	server.headersTimeout = 66000;
+
+	setupWebSocket(server);
+
+	server.listen(PORT, HOST, () => {
+		console.log(`✅ HTTP listening on http://${HOST}:${PORT}`);
+	});
+}
+
+process.on("uncaughtException", (err) => {
+	console.error("❌ Uncaught exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+	console.error("❌ Unhandled rejection:", reason);
+});
+
+void start();

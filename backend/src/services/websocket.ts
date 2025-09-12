@@ -143,134 +143,43 @@ export function setupWebSocket(server: HTTPServer) {
 								break;
 
 							case "update":
-								// Оновлюємо час останнього update від ESP32
 								esp32LastUpdate.set(ws, Date.now());
-
-								// Пересилаємо дані сенсорів всім web клієнтам
-								wss.clients.forEach((client) => {
-									if (
-										client !== ws &&
-										client.readyState === WebSocket.OPEN &&
-										clientTypes.get(client) === "web"
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "update",
-												data: parsed.data,
-											})
-										);
-									}
-								});
-
 								handleSensorUpdate(parsed.data);
-
-								// Перевіряємо і оновлюємо статус
+								broadcastToWeb(wss, "update", parsed.data, { exclude: ws });
 								checkAndBroadcastStatus(wss);
 								break;
 
 							case "switchState":
-								// Оновлюємо час останнього update від ESP32
 								esp32LastUpdate.set(ws, Date.now());
 								switchState = parsed.data;
-
-								// Пересилаємо дані сенсорів всім web клієнтам
-								wss.clients.forEach((client) => {
-									if (
-										client !== ws &&
-										client.readyState === WebSocket.OPEN &&
-										clientTypes.get(client) === "web"
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "switchState",
-												data: parsed.data,
-											})
-										);
-									}
+								broadcastToWeb(wss, "switchState", parsed.data, {
+									exclude: ws,
 								});
-
-								// Перевіряємо і оновлюємо статус
 								checkAndBroadcastStatus(wss);
 								break;
 							case "changeMode":
-								// Оновлюємо час останнього update від ESP32
 								esp32LastUpdate.set(ws, Date.now());
 								mode = parsed.data;
-
-								// Пересилаємо дані сенсорів всім web клієнтам
-								wss.clients.forEach((client) => {
-									if (
-										client !== ws &&
-										client.readyState === WebSocket.OPEN &&
-										clientTypes.get(client) === "web"
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "changeMode",
-												data: parsed.data,
-											})
-										);
-									}
-								});
-
-								// Перевіряємо і оновлюємо статус
+								broadcastToWeb(wss, "changeMode", parsed.data, { exclude: ws });
 								checkAndBroadcastStatus(wss);
 								break;
 							case "changeFanInSpd":
-								// Оновлюємо час останнього update від ESP32
 								esp32LastUpdate.set(ws, Date.now());
 								fanInSpeed = parsed.data;
-
-								// Пересилаємо дані сенсорів всім web клієнтам
-								wss.clients.forEach((client) => {
-									if (
-										client !== ws &&
-										client.readyState === WebSocket.OPEN &&
-										clientTypes.get(client) === "web"
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "changeFanInSpd",
-												data: parsed.data,
-											})
-										);
-									}
+								broadcastToWeb(wss, "changeFanInSpd", parsed.data, {
+									exclude: ws,
 								});
-
-								// Перевіряємо і оновлюємо статус
 								checkAndBroadcastStatus(wss);
 								break;
 							case "changeFanOutSpd":
-								// Оновлюємо час останнього update від ESP32
 								esp32LastUpdate.set(ws, Date.now());
 								fanOutSpeed = parsed.data;
-
-								// Пересилаємо дані сенсорів всім web клієнтам
-								wss.clients.forEach((client) => {
-									if (
-										client !== ws &&
-										client.readyState === WebSocket.OPEN &&
-										clientTypes.get(client) === "web"
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "changeFanOutSpd",
-												data: parsed.data,
-											})
-										);
-									}
+								broadcastToWeb(wss, "changeFanOutSpd", parsed.data, {
+									exclude: ws,
 								});
-
-								// Перевіряємо і оновлюємо статус
 								checkAndBroadcastStatus(wss);
 								break;
 							case "init":
-								// Пересилаємо дані сенсорів всім web клієнтам
 								switchState = parsed.data.switchState;
 								mode = parsed.data.mode;
 								fanInSpeed = parsed.data.fanInSpd;
@@ -323,70 +232,16 @@ export function setupWebSocket(server: HTTPServer) {
 								break;
 
 							case "switchState":
-								for (const [client, type] of clientTypes.entries()) {
-									if (
-										type === "esp32" &&
-										client.readyState === WebSocket.OPEN
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "switchState",
-												data: parsed.data,
-											})
-										);
-									}
-								}
+								sendToAllESP32("switchState", parsed.data);
 								break;
-
 							case "changeMode":
-								for (const [client, type] of clientTypes.entries()) {
-									if (
-										type === "esp32" &&
-										client.readyState === WebSocket.OPEN
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "changeMode",
-												data: parsed.data,
-											})
-										);
-									}
-								}
+								sendToAllESP32("changeMode", parsed.data);
 								break;
 							case "changeFanInSpd":
-								for (const [client, type] of clientTypes.entries()) {
-									if (
-										type === "esp32" &&
-										client.readyState === WebSocket.OPEN
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "changeFanInSpd",
-												data: parsed.data,
-											})
-										);
-									}
-								}
+								sendToAllESP32("changeFanInSpd", parsed.data);
 								break;
-
 							case "changeFanOutSpd":
-								for (const [client, type] of clientTypes.entries()) {
-									if (
-										type === "esp32" &&
-										client.readyState === WebSocket.OPEN
-									) {
-										client.send(
-											JSON.stringify({
-												device: "server",
-												type: "changeFanOutSpd",
-												data: parsed.data,
-											})
-										);
-									}
-								}
+								sendToAllESP32("changeFanOutSpd", parsed.data);
 								break;
 
 							case "ping":
@@ -462,6 +317,33 @@ export function setupWebSocket(server: HTTPServer) {
 	}, HEARTBEAT_MS);
 
 	console.log("✅ WebSocket доступний на /ws");
+}
+
+// === Допоміжні функції відправки (DRY) ===
+function broadcastToWeb(
+	wss: WebSocketServer,
+	type: string,
+	data: unknown,
+	options: { exclude?: WebSocket } = {}
+) {
+	const message = JSON.stringify({ device: "server", type, data });
+	wss.clients.forEach((client) => {
+		if (
+			client.readyState === WebSocket.OPEN &&
+			clientTypes.get(client) === "web" &&
+			client !== options.exclude
+		) {
+			client.send(message);
+		}
+	});
+}
+
+function sendToAllESP32(type: string, data: unknown) {
+	for (const [client, kind] of clientTypes.entries()) {
+		if (kind === "esp32" && client.readyState === WebSocket.OPEN) {
+			client.send(JSON.stringify({ device: "server", type, data }));
+		}
+	}
 }
 
 async function getLatestSensorData(limit = 10) {
