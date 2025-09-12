@@ -7,8 +7,10 @@
 #include <WiFi.h>
 #include <Wire.h>
 
-#define WIFI_SSID "Urec_Holodec"
-#define WIFI_PASSWORD "nash526safron"
+#define WIFI_SSID "Danyil"
+// #define WIFI_SSID "Urec_Holodec"
+#define WIFI_PASSWORD "88888888"
+// #define WIFI_PASSWORD "nash526safron"
 
 #define WS_HOST "smartrecu.onrender.com"
 #define WS_PORT 443
