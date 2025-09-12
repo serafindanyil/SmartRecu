@@ -29,6 +29,7 @@ let mode: TMode | null = null;
 let fanInSpeed: number | null = null;
 let fanOutSpeed: number | null = null;
 
+// Latest in-memory sensor values (volatile cache)
 let humidityLevel: number | null = null;
 let CO2Level: number | null = null;
 let tempInside: number | null = null;
@@ -100,16 +101,23 @@ export function setupWebSocket(server: HTTPServer) {
 		checkAndBroadcastStatus(wss);
 	}, 2000);
 
+	const SENSOR_PERSIST_MS = 120000; // 2 minutes
+	const ANALYTICS_REFRESH_MS = 300000; // 5 minutes
+
 	const saveDataInterval = setInterval(() => {
 		console.log("⏰ saveSensorData interval called");
-		saveSensorData(wss);
-		// If saveSensorData already broadcasts, you can remove the next line to avoid double send:
-		// sendSensorDataToWebClients(wss);
-	}, 120000);
+		void saveSensorData(wss);
+	}, SENSOR_PERSIST_MS);
+
+	// Periodic analytics aggregation
+	const analyticsInterval = setInterval(() => {
+		void aggregateSensorAnalytics();
+	}, ANALYTICS_REFRESH_MS);
 
 	wss.on("close", () => {
 		clearInterval(statusCheckInterval);
 		clearInterval(saveDataInterval);
+		clearInterval(analyticsInterval);
 	});
 
 	wss.on("connection", (ws: WebSocket, req) => {
@@ -507,6 +515,19 @@ async function sendSensorDataToWebClients(wss: WebSocketServer) {
 	}
 }
 
+function haveFreshCoreValues(): boolean {
+	return humidityLevel !== null && CO2Level !== null;
+}
+
+async function insertIfNumber(
+	table: string,
+	column: string,
+	value: number | null
+) {
+	if (typeof value !== "number") return;
+	await db.execute(`INSERT INTO ${table} (${column}) VALUES (?)`, [value]);
+}
+
 async function saveSensorData(wss: WebSocketServer) {
 	// Do not save when ESP32 is offline
 	if (!hasActiveESP32()) {
@@ -522,36 +543,88 @@ async function saveSensorData(wss: WebSocketServer) {
 	});
 
 	try {
-		if (humidityLevel !== null && CO2Level !== null) {
-			// Replace CALL ... with direct INSERTs for PostgreSQL
-			await db.execute(`INSERT INTO humidity (humidity) VALUES (?)`, [
-				humidityLevel,
-			]);
-			await db.execute(`INSERT INTO co2 (co2) VALUES (?)`, [CO2Level]);
+		if (haveFreshCoreValues()) {
+			await insertIfNumber("humidity", "humidity", humidityLevel);
+			await insertIfNumber("co2", "co2", CO2Level);
+			await insertIfNumber("temp_inside", "temp_inside", tempInside);
+			await insertIfNumber("temp_outside", "temp_outside", tempOutside);
 
-			if (typeof tempInside === "number") {
-				await db.execute(`INSERT INTO temp_inside (temp_inside) VALUES (?)`, [
-					tempInside,
-				]);
-			}
-			if (typeof tempOutside === "number") {
-				await db.execute(`INSERT INTO temp_outside (temp_outside) VALUES (?)`, [
-					tempOutside,
-				]);
-			}
-
-			console.log("💾 Sensor data saved to DB:", {
+			console.log("💾 Sensor data saved to DB", {
 				humidityLevel,
 				CO2Level,
 				tempInside,
 				tempOutside,
 			});
-
 			await sendSensorDataToWebClients(wss);
 		} else {
-			console.log("⚠️ No sensor data to save");
+			console.log(
+				"⚠️ No complete core sensor data to save (humidity & co2 required)"
+			);
 		}
 	} catch (err) {
 		console.error("❌ Error saving sensor data:", err);
+	}
+}
+
+// Aggregate last hour (or partial) into fixed 5‑minute buckets; upsert into sensor_analytics
+async function aggregateSensorAnalytics() {
+	try {
+		// Round current time down to 5 minute bucket
+		const [bucketRow] = await db.execute<{ bucket: string }>(
+			`SELECT date_trunc('minute', now()) - ((extract(minute from now())::int % 5) * interval '1 minute') AS bucket`
+		);
+		const bucketStart = (bucketRow as any)[0].bucket;
+
+		// Compute averages for the current 5 minute window
+		const [rows] = await db.execute<{
+			avg_humidity: number | null;
+			avg_co2: number | null;
+			avg_temp_inside: number | null;
+			avg_temp_outside: number | null;
+			samples: number;
+		}>(
+			`WITH window AS (
+				SELECT * FROM generate_series(
+					(date_trunc('minute', to_timestamp($1)) - ((extract(minute from to_timestamp($1))::int % 5) * interval '1 minute')),
+					date_trunc('minute', to_timestamp($1)),
+					interval '1 minute'
+				) AS minute
+			)
+			SELECT
+				(SELECT AVG(humidity) FROM humidity WHERE timestamp >= $2 AND timestamp < $3) AS avg_humidity,
+				(SELECT AVG(co2) FROM co2 WHERE timestamp >= $2 AND timestamp < $3) AS avg_co2,
+				(SELECT AVG(temp_inside) FROM temp_inside WHERE timestamp >= $2 AND timestamp < $3) AS avg_temp_inside,
+				(SELECT AVG(temp_outside) FROM temp_outside WHERE timestamp >= $2 AND timestamp < $3) AS avg_temp_outside,
+				(SELECT COUNT(*) FROM humidity WHERE timestamp >= $2 AND timestamp < $3) AS samples
+			`,
+			[Date.now() / 1000, bucketStart, `${bucketStart} + interval '5 minute'`]
+		);
+
+		const agg = (rows as any)[0];
+		if (!agg) return;
+
+		await db.execute(
+			`INSERT INTO sensor_analytics (bucket_start, avg_humidity, avg_co2, avg_temp_inside, avg_temp_outside, samples)
+			 VALUES ($1,$2,$3,$4,$5,$6)
+			 ON CONFLICT (bucket_start)
+			 DO UPDATE SET avg_humidity = EXCLUDED.avg_humidity,
+				avg_co2 = EXCLUDED.avg_co2,
+				avg_temp_inside = EXCLUDED.avg_temp_inside,
+				avg_temp_outside = EXCLUDED.avg_temp_outside,
+				samples = EXCLUDED.samples,
+				updated_at = now()`,
+			[
+				bucketStart,
+				agg.avg_humidity,
+				agg.avg_co2,
+				agg.avg_temp_inside,
+				agg.avg_temp_outside,
+				agg.samples,
+			]
+		);
+
+		console.log("📊 Analytics aggregated for bucket", bucketStart, agg);
+	} catch (err) {
+		console.error("❌ Failed to aggregate analytics:", err);
 	}
 }
